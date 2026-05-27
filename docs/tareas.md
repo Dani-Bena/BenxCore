@@ -5,7 +5,7 @@
 - [x] Crear repositorio en GitHub
 - [x] Crear estructura inicial
 - [ ] Crear documentación inicial
-- [ ] Configurar backend
+- [x] Configurar backend
 - [ ] Configurar frontend
 - [ ] Diseñar base de datos
 - [ ] Crear autenticación
