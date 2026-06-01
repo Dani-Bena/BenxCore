@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: benxcore_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: benxcore_db
+      POSTGRES_USER: benxcore_user
+      POSTGRES_PASSWORD: benxcore_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - benxcore_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  benxcore_postgres_data:
