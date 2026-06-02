@@ -1,9 +1,30 @@
+# Node
 node_modules/
+**/node_modules/
+
+# Build
 dist/
 build/
+**/dist/
+**/build/
+
+# Environment variables
 .env
 .env.local
+**/.env
+**/.env.local
+
+# Logs
 npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS
 .DS_Store
 Thumbs.db
+
+# VS Code
 .vscode/
+
+# Prisma generated client
+backend/src/generated/prisma/
