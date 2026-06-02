@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum ProductType {
+  PRODUCT
+  SERVICE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String
+  nif       String?
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  clients   Client[]
+  products  Product[]
+  invoices  Invoice[]
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  companyId    Int?
+  company      Company? @relation(fields: [companyId], references: [id])
+}
+
+model Client {
+  id        Int      @id @default(autoincrement())
+  name      String
+  nif       String?
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
+  invoices  Invoice[]
+}
+
+model Product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String?
+  price       Decimal     @db.Decimal(10, 2)
+  taxRate     Decimal     @default(21) @db.Decimal(5, 2)
+  type        ProductType @default(SERVICE)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  companyId   Int
+  company     Company @relation(fields: [companyId], references: [id])
+
+  invoiceLines InvoiceLine[]
+}
+
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  invoiceNumber String
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  status        InvoiceStatus @default(DRAFT)
+
+  subtotal      Decimal       @default(0) @db.Decimal(10, 2)
+  taxTotal      Decimal       @default(0) @db.Decimal(10, 2)
+  total         Decimal       @default(0) @db.Decimal(10, 2)
+
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  companyId     Int
+  company       Company @relation(fields: [companyId], references: [id])
+
+  clientId      Int
+  client        Client @relation(fields: [clientId], references: [id])
+
+  lines         InvoiceLine[]
+
+  @@unique([companyId, invoiceNumber])
+}
+
+model InvoiceLine {
+  id          Int     @id @default(autoincrement())
+  description String
+  quantity    Decimal @db.Decimal(10, 2)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  taxRate     Decimal @db.Decimal(5, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
+  total       Decimal @db.Decimal(10, 2)
+
+  invoiceId   Int
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  productId   Int?
+  product     Product? @relation(fields: [productId], references: [id])
+}
