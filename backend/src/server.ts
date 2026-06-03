@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { prisma } from "./lib/prisma.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { companyRouter } from "./modules/company/company.routes.js";
+import { clientsRouter } from "./modules/clients/clients.routes.js";
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRouter);
 app.use("/api/company", companyRouter);
+app.use("/api/clients", clientsRouter);
 
 app.get("/", (req, res) => {
   res.json({
