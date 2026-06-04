@@ -6,6 +6,7 @@ import {
 import {
   createInvoiceSchema,
   updateDraftInvoiceSchema,
+  registerPaymentSchema,
 } from "./invoices.schemas.js";
 import {
   InvoiceServiceError,
@@ -15,6 +16,8 @@ import {
   issueInvoice,
   listInvoices,
   updateDraftInvoice,
+  listInvoicePayments,
+  registerInvoicePayment,
 } from "./invoices.service.js";
 
 export const invoicesRouter = Router();
@@ -181,6 +184,77 @@ invoicesRouter.post("/:id/issue", async (req, res) => {
     handleInvoiceError(error, res);
   }
 }); 
+invoicesRouter.get("/:id/payments", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const context = getAuthContext(authReq);
+  const invoiceId = parseId(req.params.id);
+
+  if (!context) {
+    res.status(401).json({
+      message: "User has no company assigned",
+    });
+    return;
+  }
+
+  if (!invoiceId) {
+    res.status(400).json({
+      message: "Invalid invoice id",
+    });
+    return;
+  }
+
+  try {
+    const payments = await listInvoicePayments(context, { invoiceId });
+
+    res.json({
+      payments,
+    });
+  } catch (error) {
+    handleInvoiceError(error, res);
+  }
+});
+
+invoicesRouter.post("/:id/payments", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const context = getAuthContext(authReq);
+  const invoiceId = parseId(req.params.id);
+
+  if (!context) {
+    res.status(401).json({
+      message: "User has no company assigned",
+    });
+    return;
+  }
+
+  if (!invoiceId) {
+    res.status(400).json({
+      message: "Invalid invoice id",
+    });
+    return;
+  }
+
+  const result = registerPaymentSchema.safeParse(req.body);
+
+  if (!result.success) {
+    res.status(400).json({
+      message: "Invalid request data",
+      errors: result.error.flatten(),
+    });
+    return;
+  }
+
+  try {
+    const paymentResult = await registerInvoicePayment(
+      context,
+      { invoiceId },
+      result.data
+    );
+
+    res.status(201).json(paymentResult);
+  } catch (error) {
+    handleInvoiceError(error, res);
+  }
+});
 
 invoicesRouter.put("/:id", async (req, res) => {
   const authReq = req as AuthenticatedRequest;

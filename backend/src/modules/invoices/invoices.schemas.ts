@@ -137,6 +137,25 @@ export const updateDraftInvoiceSchema = z.object({
   lines: z.array(invoiceLineInputSchema).min(1).optional(),
 });
 
+export const registerPaymentSchema = z.object({
+  amount: requiredPositiveDecimal("Payment amount"),
+
+  paymentDate: nullableDate.optional(),
+
+  method: z.enum([
+    "BANK_TRANSFER",
+    "CARD",
+    "CASH",
+    "DIRECT_DEBIT",
+    "OTHER",
+  ]),
+
+  reference: nullableTrimmedString(100, "Reference is too long"),
+
+  notes: nullableTrimmedString(1000, "Notes are too long"),
+});
+
 export type InvoiceLineInput = z.infer<typeof invoiceLineInputSchema>;
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateDraftInvoiceInput = z.infer<typeof updateDraftInvoiceSchema>;
+export type RegisterPaymentInput = z.infer<typeof registerPaymentSchema>;

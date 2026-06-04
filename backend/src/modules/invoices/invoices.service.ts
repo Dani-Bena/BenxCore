@@ -3,6 +3,7 @@ import type {
   CreateInvoiceInput,
   InvoiceLineInput,
   UpdateDraftInvoiceInput,
+  RegisterPaymentInput,
 } from "./invoices.schemas.js";
 
 type ServiceContext = {
@@ -695,6 +696,165 @@ export async function issueInvoice(
     });
 
     return issuedInvoice;
+  });
+  
+}
+function toNumber(value: unknown): number {
+  return Number(value);
+}
+
+function getInvoiceStatusAfterPayment(amountDue: number) {
+  return amountDue <= 0 ? "PAID" : "PARTIALLY_PAID";
+}
+
+export async function listInvoicePayments(
+  context: ServiceContext,
+  input: InvoiceIdInput
+) {
+  const { companyId } = context;
+  const { invoiceId } = input;
+
+  const invoice = await prisma.invoice.findFirst({
+    where: {
+      id: invoiceId,
+      companyId,
+    },
+  });
+
+  if (!invoice) {
+    throw new InvoiceServiceError("Invoice not found", 404);
+  }
+
+  return prisma.payment.findMany({
+    where: {
+      invoiceId,
+    },
+    orderBy: {
+      paymentDate: "desc",
+    },
+  });
+}
+
+export async function registerInvoicePayment(
+  context: ServiceContext,
+  input: InvoiceIdInput,
+  data: RegisterPaymentInput
+) {
+  const { companyId, userId } = context;
+  const { invoiceId } = input;
+
+  const existingInvoice = await prisma.invoice.findFirst({
+    where: {
+      id: invoiceId,
+      companyId,
+    },
+    include: {
+      payments: true,
+    },
+  });
+
+  if (!existingInvoice) {
+    throw new InvoiceServiceError("Invoice not found", 404);
+  }
+
+  if (existingInvoice.status === "DRAFT") {
+    throw new InvoiceServiceError(
+      "Draft invoices cannot receive payments",
+      409
+    );
+  }
+
+  if (existingInvoice.status === "CANCELLED") {
+    throw new InvoiceServiceError(
+      "Cancelled invoices cannot receive payments",
+      409
+    );
+  }
+
+  if (existingInvoice.status === "PAID") {
+    throw new InvoiceServiceError("Invoice is already paid", 409);
+  }
+
+  const currentAmountPaid = toNumber(existingInvoice.amountPaid);
+  const currentAmountDue = toNumber(existingInvoice.amountDue);
+  const invoiceTotal = toNumber(existingInvoice.total);
+  const paymentAmount = roundMoney(data.amount);
+
+  if (paymentAmount <= 0) {
+    throw new InvoiceServiceError(
+      "Payment amount must be greater than zero",
+      400
+    );
+  }
+
+  if (paymentAmount > currentAmountDue) {
+    throw new InvoiceServiceError(
+      "Payment amount cannot be greater than amount due",
+      400
+    );
+  }
+
+  const nextAmountPaid = roundMoney(currentAmountPaid + paymentAmount);
+  const nextAmountDue = roundMoney(invoiceTotal - nextAmountPaid);
+  const nextStatus = getInvoiceStatusAfterPayment(nextAmountDue);
+
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.create({
+      data: {
+        amount: toMoneyString(paymentAmount),
+        paymentDate: data.paymentDate ?? new Date(),
+        method: data.method,
+        reference: data.reference ?? null,
+        notes: data.notes ?? null,
+        invoiceId,
+      },
+    });
+
+    const updatedInvoice = await tx.invoice.update({
+      where: {
+        id: invoiceId,
+      },
+      data: {
+        amountPaid: toMoneyString(nextAmountPaid),
+        amountDue: toMoneyString(nextAmountDue),
+        status: nextStatus,
+      },
+      include: {
+        client: true,
+        invoiceSeries: true,
+        lines: {
+          orderBy: {
+            lineNumber: "asc",
+          },
+        },
+        taxSummaries: true,
+        payments: {
+          orderBy: {
+            paymentDate: "desc",
+          },
+        },
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        entityType: "Payment",
+        entityId: payment.id,
+        action: "PAY",
+        oldValue: toAuditJson(existingInvoice),
+        newValue: toAuditJson({
+          payment,
+          invoice: updatedInvoice,
+        }),
+        companyId,
+        userId,
+      },
+    });
+
+    return {
+      payment,
+      invoice: updatedInvoice,
+    };
   });
 }
  
