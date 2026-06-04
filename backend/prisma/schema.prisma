@@ -62,6 +62,22 @@ enum AuditAction {
   CANCEL
   PAY
 }
+enum ClientType {
+  COMPANY
+  FREELANCER
+  INDIVIDUAL
+  PUBLIC_ENTITY
+  OTHER
+}
+
+enum TaxIdType {
+  NIF
+  CIF
+  NIE
+  VAT
+  PASSPORT
+  OTHER
+}
 
 model Company {
   id        Int      @id @default(autoincrement())
@@ -99,13 +115,30 @@ model User {
 }
 
 model Client {
-  id        Int      @id @default(autoincrement())
-  name      String
-  nif       String?
-  email     String?
-  phone     String?
-  address   String?
-  active Boolean @default(true)
+  id        Int        @id @default(autoincrement())
+
+  legalName  String   @map("name")
+  tradeName  String?
+  type       ClientType @default(COMPANY)
+
+  taxId      String?  @map("nif")
+  taxIdType  TaxIdType @default(CIF)
+
+  email          String?
+  invoicingEmail String?
+  phone          String?
+  contactName    String?
+
+  address    String?
+  city       String?
+  province   String?
+  postalCode String?
+  countryCode String @default("ES")
+
+  paymentTermsDays Int @default(0)
+  notes            String?
+
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -113,6 +146,10 @@ model Client {
   company   Company @relation(fields: [companyId], references: [id])
 
   invoices  Invoice[]
+
+  @@index([companyId])
+  @@index([companyId, active])
+  @@index([companyId, taxId])
 }
 
 model Product {

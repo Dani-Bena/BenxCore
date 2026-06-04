@@ -133,18 +133,18 @@ clientsRouter.post("/", async (req, res) => {
 
   const data = result.data;
 
-  if (data.nif) {
-    const existingClientWithNif = await prisma.client.findFirst({
+  if (data.taxId) {
+    const existingClientWithTaxId = await prisma.client.findFirst({
       where: {
         companyId,
-        nif: data.nif,
+        taxId: data.taxId,
         active: true,
       },
     });
 
-    if (existingClientWithNif) {
+    if (existingClientWithTaxId) {
       res.status(409).json({
-        message: "A client with this NIF already exists",
+        message: "A client with this tax Id already exists",
       });
       return;
     }
@@ -227,11 +227,11 @@ clientsRouter.put("/:id", async (req, res) => {
 
   const data = result.data;
 
-  if (data.nif) {
+  if (data.taxId) {
     const duplicatedClient = await prisma.client.findFirst({
       where: {
         companyId,
-        nif: data.nif,
+        taxId: data.taxId,
         active: true,
         id: {
           not: clientId,
@@ -241,7 +241,7 @@ clientsRouter.put("/:id", async (req, res) => {
 
     if (duplicatedClient) {
       res.status(409).json({
-        message: "Another client with this NIF already exists",
+        message: "Another client with this tax ID already exists",
       });
       return;
     }

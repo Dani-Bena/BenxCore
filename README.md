@@ -21,5 +21,5 @@
 17. POST /api/auth/login ✅
 18. GET /api/auth/me ✅
 19. JWT ✅
-20. bcrypt ✅
-21. middleware de autenticación ✅
+20. Bcrypt ✅
+21. Middleware de autenticación ✅
