@@ -154,11 +154,18 @@ model Client {
 
 model Product {
   id          Int         @id @default(autoincrement())
+
+  code        String?
   name        String
   description String?
-  price       Decimal     @db.Decimal(10, 2)
-  taxRate     Decimal     @default(21) @db.Decimal(5, 2)
+
   type        ProductType @default(SERVICE)
+
+  unit        String      @default("unit")
+  price       Decimal     @db.Decimal(10, 2)
+  costPrice   Decimal?    @db.Decimal(10, 2)
+  taxRate     Decimal     @default(21) @db.Decimal(5, 2)
+
   active      Boolean     @default(true)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -170,6 +177,11 @@ model Product {
   revenueAccount   AccountingAccount? @relation("ProductRevenueAccount", fields: [revenueAccountId], references: [id])
 
   invoiceLines InvoiceLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([companyId, active])
+  @@index([companyId, type])
 }
 
 model InvoiceSeries {

@@ -7,8 +7,8 @@
 - [ ] Crear documentación inicial
 - [x] Configurar backend
 - [ ] Configurar frontend
-- [ ] Diseñar base de datos
-- [ ] Crear autenticación
-- [ ] Crear módulo de clientes
+- [x] Diseñar base de datos
+- [x] Crear autenticación
+- [x] Crear módulo de clientes
 - [ ] Crear módulo de productos
 - [ ] Crear módulo de facturas

@@ -1,10 +1,17 @@
 import { Router } from "express";
-import { prisma } from "../../lib/prisma.js";
 import {
   authMiddleware,
   type AuthenticatedRequest,
 } from "../../middleware/auth.middleware.js";
 import { createClientSchema, updateClientSchema } from "./clients.schemas.js";
+import {
+  ClientServiceError,
+  createClient,
+  deactivateClient,
+  getClientById,
+  listClients,
+  updateClient,
+} from "./clients.service.js";
 
 export const clientsRouter = Router();
 
@@ -30,49 +37,63 @@ function parseId(id: string | undefined): number | null {
   return parsedId;
 }
 
-/**
- * GET /api/clients
- * Lists active clients by default.
- * Use ?includeInactive=true to include deactivated clients.
- */
-clientsRouter.get("/", async (req, res) => {
-  const authReq = req as AuthenticatedRequest;
-  const companyId = getCompanyId(authReq);
+function getAuthContext(req: AuthenticatedRequest) {
+  const companyId = getCompanyId(req);
 
   if (!companyId) {
+    return null;
+  }
+
+  return {
+    companyId,
+    userId: getUserId(req),
+  };
+}
+
+function handleServiceError(error: unknown, res: any) {
+  if (error instanceof ClientServiceError) {
+    res.status(error.statusCode).json({
+      message: error.message,
+    });
+    return;
+  }
+
+  console.error(error);
+
+  res.status(500).json({
+    message: "Internal server error",
+  });
+}
+
+clientsRouter.get("/", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const context = getAuthContext(authReq);
+
+  if (!context) {
     res.status(401).json({
       message: "User has no company assigned",
     });
     return;
   }
 
-  const includeInactive = req.query.includeInactive === "true";
+  try {
+    const includeInactive = req.query.includeInactive === "true";
+    const clients = await listClients(context, { includeInactive });
 
-  const clients = await prisma.client.findMany({
-    where: {
-      companyId,
-      ...(includeInactive ? {} : { active: true }),
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  res.json({
-    clients,
-  });
+    res.json({
+      clients,
+    });
+  } catch (error) {
+    handleServiceError(error, res);
+  }
 });
 
-/**
- * GET /api/clients/:id
- * Gets a single client only if it belongs to the authenticated company.
- */
 clientsRouter.get("/:id", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
-  const companyId = getCompanyId(authReq);
+  const context = getAuthContext(authReq);
   const clientId = parseId(req.params.id);
 
-  if (!companyId) {
+  if (!context) {
     res.status(401).json({
       message: "User has no company assigned",
     });
@@ -86,35 +107,22 @@ clientsRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  const client = await prisma.client.findFirst({
-    where: {
-      id: clientId,
-      companyId,
-    },
-  });
+  try {
+    const client = await getClientById(context, { clientId });
 
-  if (!client) {
-    res.status(404).json({
-      message: "Client not found",
+    res.json({
+      client,
     });
-    return;
+  } catch (error) {
+    handleServiceError(error, res);
   }
-
-  res.json({
-    client,
-  });
 });
 
-/**
- * POST /api/clients
- * Creates a client associated with the authenticated user's company.
- */
 clientsRouter.post("/", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
-  const companyId = getCompanyId(authReq);
-  const userId = getUserId(authReq);
+  const context = getAuthContext(authReq);
 
-  if (!companyId) {
+  if (!context) {
     res.status(401).json({
       message: "User has no company assigned",
     });
@@ -131,63 +139,23 @@ clientsRouter.post("/", async (req, res) => {
     return;
   }
 
-  const data = result.data;
+  try {
+    const client = await createClient(context, result.data);
 
-  if (data.taxId) {
-    const existingClientWithTaxId = await prisma.client.findFirst({
-      where: {
-        companyId,
-        taxId: data.taxId,
-        active: true,
-      },
+    res.status(201).json({
+      client,
     });
-
-    if (existingClientWithTaxId) {
-      res.status(409).json({
-        message: "A client with this tax Id already exists",
-      });
-      return;
-    }
+  } catch (error) {
+    handleServiceError(error, res);
   }
-
-  const client = await prisma.$transaction(async (tx) => {
-    const createdClient = await tx.client.create({
-      data: {
-        ...data,
-        companyId,
-      },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        entityType: "Client",
-        entityId: createdClient.id,
-        action: "CREATE",
-        newValue: createdClient,
-        companyId,
-        userId,
-      },
-    });
-
-    return createdClient;
-  });
-
-  res.status(201).json({
-    client,
-  });
 });
 
-/**
- * PUT /api/clients/:id
- * Updates a client only if it belongs to the authenticated company.
- */
 clientsRouter.put("/:id", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
-  const companyId = getCompanyId(authReq);
-  const userId = getUserId(authReq);
+  const context = getAuthContext(authReq);
   const clientId = parseId(req.params.id);
 
-  if (!companyId) {
+  if (!context) {
     res.status(401).json({
       message: "User has no company assigned",
     });
@@ -211,81 +179,23 @@ clientsRouter.put("/:id", async (req, res) => {
     return;
   }
 
-  const existingClient = await prisma.client.findFirst({
-    where: {
-      id: clientId,
-      companyId,
-    },
-  });
+  try {
+    const client = await updateClient(context, { clientId }, result.data);
 
-  if (!existingClient) {
-    res.status(404).json({
-      message: "Client not found",
+    res.json({
+      client,
     });
-    return;
+  } catch (error) {
+    handleServiceError(error, res);
   }
-
-  const data = result.data;
-
-  if (data.taxId) {
-    const duplicatedClient = await prisma.client.findFirst({
-      where: {
-        companyId,
-        taxId: data.taxId,
-        active: true,
-        id: {
-          not: clientId,
-        },
-      },
-    });
-
-    if (duplicatedClient) {
-      res.status(409).json({
-        message: "Another client with this tax ID already exists",
-      });
-      return;
-    }
-  }
-
-  const updatedClient = await prisma.$transaction(async (tx) => {
-    const client = await tx.client.update({
-      where: {
-        id: clientId,
-      },
-      data,
-    });
-
-    await tx.auditLog.create({
-      data: {
-        entityType: "Client",
-        entityId: client.id,
-        action: "UPDATE",
-        oldValue: existingClient,
-        newValue: client,
-        companyId,
-        userId,
-      },
-    });
-
-    return client;
-  });
-
-  res.json({
-    client: updatedClient,
-  });
 });
 
-/**
- * DELETE /api/clients/:id
- * Soft delete: deactivates the client instead of deleting it from the database.
- */
 clientsRouter.delete("/:id", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
-  const companyId = getCompanyId(authReq);
-  const userId = getUserId(authReq);
+  const context = getAuthContext(authReq);
   const clientId = parseId(req.params.id);
 
-  if (!companyId) {
+  if (!context) {
     res.status(401).json({
       message: "User has no company assigned",
     });
@@ -299,54 +209,14 @@ clientsRouter.delete("/:id", async (req, res) => {
     return;
   }
 
-  const existingClient = await prisma.client.findFirst({
-    where: {
-      id: clientId,
-      companyId,
-    },
-  });
+  try {
+    const client = await deactivateClient(context, { clientId });
 
-  if (!existingClient) {
-    res.status(404).json({
-      message: "Client not found",
+    res.json({
+      message: "Client deactivated successfully",
+      client,
     });
-    return;
+  } catch (error) {
+    handleServiceError(error, res);
   }
-
-  if (!existingClient.active) {
-    res.status(409).json({
-      message: "Client is already inactive",
-    });
-    return;
-  }
-
-  const deactivatedClient = await prisma.$transaction(async (tx) => {
-    const client = await tx.client.update({
-      where: {
-        id: clientId,
-      },
-      data: {
-        active: false,
-      },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        entityType: "Client",
-        entityId: client.id,
-        action: "DELETE",
-        oldValue: existingClient,
-        newValue: client,
-        companyId,
-        userId,
-      },
-    });
-
-    return client;
-  });
-
-  res.json({
-    message: "Client deactivated successfully",
-    client: deactivatedClient,
-  });
 });
