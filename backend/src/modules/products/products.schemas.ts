@@ -101,7 +101,44 @@ export const createProductSchema = z.object({
   revenueAccountId: optionalPositiveInteger("Revenue account ID"),
 });
 
-export const updateProductSchema = createProductSchema.partial().extend({
+export const updateProductSchema = z.object({
+  code: nullableUppercaseString(50, "Code is too long"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Product name must have at least 2 characters")
+    .max(150, "Product name is too long")
+    .optional(),
+
+  description: nullableTrimmedString(1000, "Description is too long"),
+
+  type: z.enum(["PRODUCT", "SERVICE"]).optional(),
+
+  unit: z
+    .string()
+    .trim()
+    .min(1, "Unit is required")
+    .max(30, "Unit is too long")
+    .optional(),
+
+  price: requiredDecimal("Price").optional(),
+
+  costPrice: nullableDecimal("Cost price"),
+
+  taxRate: z.preprocess(
+    emptyStringToUndefined,
+    z.coerce
+      .number({
+        message: "Tax rate must be a number",
+      })
+      .min(0, "Tax rate cannot be negative")
+      .max(100, "Tax rate cannot exceed 100")
+      .optional()
+  ),
+
+  revenueAccountId: optionalPositiveInteger("Revenue account ID"),
+
   active: z.boolean().optional(),
 });
 
