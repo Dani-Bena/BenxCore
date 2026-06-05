@@ -8,6 +8,7 @@ import { clientsRouter } from "./modules/clients/clients.routes.js";
 import { productsRouter } from "./modules/products/products.routes.js";
 import { invoiceSeriesRouter } from "./modules/invoice-series/invoice-series.routes.js";
 import { invoicesRouter } from "./modules/invoices/invoices.routes.js";
+import { accountingRouter } from "./modules/accounting/accounting.routes.js";
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use("/api/clients", clientsRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/invoice-series", invoiceSeriesRouter);
 app.use("/api/invoices", invoicesRouter);
+app.use("/api/accounting", accountingRouter);
 
 app.get("/", (req, res) => {
   res.json({

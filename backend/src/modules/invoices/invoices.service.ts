@@ -1,4 +1,8 @@
 import { prisma } from "../../lib/prisma.js";
+import {
+  createInvoiceIssuedJournalEntry,
+  createInvoicePaymentJournalEntry,
+} from "../accounting/accounting.service.js";
 import type {
   CreateInvoiceInput,
   InvoiceLineInput,
@@ -207,6 +211,15 @@ async function getFullInvoice(invoiceId: number, companyId: number) {
       },
       taxSummaries: true,
       payments: true,
+      journalEntries: {
+        include:{
+          lines: {
+            include: {
+              account: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -677,11 +690,21 @@ export async function issueInvoice(
           orderBy: {
             lineNumber: "asc",
           },
+          include: {
+            product: true,
+          },
         },
         taxSummaries: true,
         payments: true,
       },
     });
+    
+    
+    await createInvoiceIssuedJournalEntry(tx, {
+  companyId,
+  invoice: issuedInvoice,
+});
+    
 
     await tx.auditLog.create({
       data: {
@@ -809,6 +832,7 @@ export async function registerInvoicePayment(
         invoiceId,
       },
     });
+    
 
     const updatedInvoice = await tx.invoice.update({
       where: {
@@ -835,6 +859,13 @@ export async function registerInvoicePayment(
         },
       },
     });
+    await createInvoicePaymentJournalEntry(tx, {
+  companyId,
+  invoiceId,
+  paymentId: payment.id,
+  amount: payment.amount,
+  invoiceNumber: updatedInvoice.invoiceNumber,
+});
 
     await tx.auditLog.create({
       data: {
