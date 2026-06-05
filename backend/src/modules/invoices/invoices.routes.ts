@@ -5,19 +5,21 @@ import {
 } from "../../middleware/auth.middleware.js";
 import {
   createInvoiceSchema,
-  updateDraftInvoiceSchema,
   registerPaymentSchema,
+  updateDraftInvoiceSchema,
 } from "./invoices.schemas.js";
+import { generateInvoicePdf } from "./invoice-pdf.service.js";
+import { generatePaymentReceiptPdf } from "./payment-receipt-pdf.service.js";
 import {
   InvoiceServiceError,
   cancelDraftInvoice,
   createDraftInvoice,
   getInvoiceById,
   issueInvoice,
-  listInvoices,
-  updateDraftInvoice,
   listInvoicePayments,
+  listInvoices,
   registerInvoicePayment,
+  updateDraftInvoice,
 } from "./invoices.service.js";
 
 export const invoicesRouter = Router();
@@ -72,6 +74,10 @@ function handleInvoiceError(error: unknown, res: Response) {
   });
 }
 
+/**
+ * GET /api/invoices
+ * List invoices for the authenticated company.
+ */
 invoicesRouter.get("/", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const context = getAuthContext(authReq);
@@ -94,6 +100,131 @@ invoicesRouter.get("/", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/invoices/:id/pdf
+ * Generate PDF for an issued invoice.
+ */
+invoicesRouter.get("/:id/pdf", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const context = getAuthContext(authReq);
+  const invoiceId = parseId(req.params.id);
+
+  if (!context) {
+    res.status(401).json({
+      message: "User has no company assigned",
+    });
+    return;
+  }
+
+  if (!invoiceId) {
+    res.status(400).json({
+      message: "Invalid invoice id",
+    });
+    return;
+  }
+
+  try {
+    const pdf = await generateInvoicePdf(context, { invoiceId });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${pdf.filename}"`
+    );
+
+    res.send(pdf.buffer);
+  } catch (error) {
+    handleInvoiceError(error, res);
+  }
+});
+
+/**
+ * GET /api/invoices/:id/payments/:paymentId/receipt
+ * Generate payment receipt PDF.
+ */
+invoicesRouter.get("/:id/payments/:paymentId/receipt", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const context = getAuthContext(authReq);
+  const invoiceId = parseId(req.params.id);
+  const paymentId = parseId(req.params.paymentId);
+
+  if (!context) {
+    res.status(401).json({
+      message: "User has no company assigned",
+    });
+    return;
+  }
+
+  if (!invoiceId) {
+    res.status(400).json({
+      message: "Invalid invoice id",
+    });
+    return;
+  }
+
+  if (!paymentId) {
+    res.status(400).json({
+      message: "Invalid payment id",
+    });
+    return;
+  }
+
+  try {
+    const pdf = await generatePaymentReceiptPdf(context, {
+      invoiceId,
+      paymentId,
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${pdf.filename}"`
+    );
+
+    res.send(pdf.buffer);
+  } catch (error) {
+    handleInvoiceError(error, res);
+  }
+});
+
+/**
+ * GET /api/invoices/:id/payments
+ * List invoice payments.
+ */
+invoicesRouter.get("/:id/payments", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const context = getAuthContext(authReq);
+  const invoiceId = parseId(req.params.id);
+
+  if (!context) {
+    res.status(401).json({
+      message: "User has no company assigned",
+    });
+    return;
+  }
+
+  if (!invoiceId) {
+    res.status(400).json({
+      message: "Invalid invoice id",
+    });
+    return;
+  }
+
+  try {
+    const payments = await listInvoicePayments(context, { invoiceId });
+
+    res.json({
+      payments,
+    });
+  } catch (error) {
+    handleInvoiceError(error, res);
+  }
+});
+
+/**
+ * GET /api/invoices/:id
+ * Get invoice detail.
+ */
 invoicesRouter.get("/:id", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const context = getAuthContext(authReq);
@@ -124,6 +255,10 @@ invoicesRouter.get("/:id", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/invoices
+ * Create draft invoice.
+ */
 invoicesRouter.post("/", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const context = getAuthContext(authReq);
@@ -155,6 +290,11 @@ invoicesRouter.post("/", async (req, res) => {
     handleInvoiceError(error, res);
   }
 });
+
+/**
+ * POST /api/invoices/:id/issue
+ * Issue draft invoice.
+ */
 invoicesRouter.post("/:id/issue", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const context = getAuthContext(authReq);
@@ -183,37 +323,12 @@ invoicesRouter.post("/:id/issue", async (req, res) => {
   } catch (error) {
     handleInvoiceError(error, res);
   }
-}); 
-invoicesRouter.get("/:id/payments", async (req, res) => {
-  const authReq = req as AuthenticatedRequest;
-  const context = getAuthContext(authReq);
-  const invoiceId = parseId(req.params.id);
-
-  if (!context) {
-    res.status(401).json({
-      message: "User has no company assigned",
-    });
-    return;
-  }
-
-  if (!invoiceId) {
-    res.status(400).json({
-      message: "Invalid invoice id",
-    });
-    return;
-  }
-
-  try {
-    const payments = await listInvoicePayments(context, { invoiceId });
-
-    res.json({
-      payments,
-    });
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
 });
 
+/**
+ * POST /api/invoices/:id/payments
+ * Register invoice payment.
+ */
 invoicesRouter.post("/:id/payments", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const context = getAuthContext(authReq);
@@ -256,6 +371,10 @@ invoicesRouter.post("/:id/payments", async (req, res) => {
   }
 });
 
+/**
+ * PUT /api/invoices/:id
+ * Update draft invoice.
+ */
 invoicesRouter.put("/:id", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const context = getAuthContext(authReq);
@@ -300,6 +419,10 @@ invoicesRouter.put("/:id", async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/invoices/:id
+ * Cancel draft invoice.
+ */
 invoicesRouter.delete("/:id", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const context = getAuthContext(authReq);
