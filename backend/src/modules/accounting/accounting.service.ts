@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+
 const DEFAULT_ACCOUNTS = [
   {
     code: "430",
@@ -29,6 +30,49 @@ const DEFAULT_ACCOUNTS = [
 
 type AccountingTx = any;
 
+type ServiceContext = {
+  companyId: number;
+  userId: number | null;
+};
+
+type JournalEntryIdInput = {
+  journalEntryId: number;
+};
+
+type JournalLineInput = {
+  accountId: number;
+  description: string;
+  debit: string;
+  credit: string;
+};
+
+type InvoiceLineForAccounting = {
+  description: string;
+  subtotal: unknown;
+  productId: number | null;
+  product?: {
+    type: "PRODUCT" | "SERVICE";
+    revenueAccountId: number | null;
+  } | null;
+};
+
+type InvoiceForIssueAccounting = {
+  id: number;
+  invoiceNumber: string | null;
+  total: unknown;
+  taxTotal: unknown;
+  lines: InvoiceLineForAccounting[];
+};
+
+export class AccountingServiceError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number
+  ) {
+    super(message);
+  }
+}
+
 function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
@@ -39,6 +83,25 @@ function toMoneyString(value: number): string {
 
 function toNumber(value: unknown): number {
   return Number(value);
+}
+
+function assertBalancedJournalLines(lines: JournalLineInput[]) {
+  const totalDebit = roundMoney(
+    lines.reduce((sum, line) => sum + toNumber(line.debit), 0)
+  );
+
+  const totalCredit = roundMoney(
+    lines.reduce((sum, line) => sum + toNumber(line.credit), 0)
+  );
+
+  if (totalDebit !== totalCredit) {
+    throw new AccountingServiceError(
+      `Journal entry is not balanced. Debit=${toMoneyString(
+        totalDebit
+      )}, Credit=${toMoneyString(totalCredit)}`,
+      400
+    );
+  }
 }
 
 async function ensureDefaultAccountingAccounts(
@@ -76,24 +139,6 @@ async function ensureDefaultAccountingAccounts(
   return accounts;
 }
 
-type InvoiceLineForAccounting = {
-  description: string;
-  subtotal: unknown;
-  productId: number | null;
-  product?: {
-    type: "PRODUCT" | "SERVICE";
-    revenueAccountId: number | null;
-  } | null;
-};
-
-type InvoiceForIssueAccounting = {
-  id: number;
-  invoiceNumber: string | null;
-  total: unknown;
-  taxTotal: unknown;
-  lines: InvoiceLineForAccounting[];
-};
-
 export async function createInvoiceIssuedJournalEntry(
   tx: AccountingTx,
   params: {
@@ -110,8 +155,16 @@ export async function createInvoiceIssuedJournalEntry(
   const productRevenueAccount = accounts["700"];
   const serviceRevenueAccount = accounts["705"];
 
-  if (!clientAccount || !vatAccount || !productRevenueAccount || !serviceRevenueAccount) {
-    throw new Error("Default accounting accounts could not be created");
+  if (
+    !clientAccount ||
+    !vatAccount ||
+    !productRevenueAccount ||
+    !serviceRevenueAccount
+  ) {
+    throw new AccountingServiceError(
+      "Default accounting accounts could not be created",
+      500
+    );
   }
 
   const revenueGroups = new Map<
@@ -146,7 +199,34 @@ export async function createInvoiceIssuedJournalEntry(
   const total = toNumber(invoice.total);
   const taxTotal = toNumber(invoice.taxTotal);
 
-  const journalEntry = await tx.journalEntry.create({
+  const journalLines: JournalLineInput[] = [
+    {
+      accountId: clientAccount.id,
+      description: "Cliente por factura emitida",
+      debit: toMoneyString(total),
+      credit: "0.00",
+    },
+    ...Array.from(revenueGroups.values()).map((group) => ({
+      accountId: group.accountId,
+      description: group.description,
+      debit: "0.00",
+      credit: toMoneyString(group.amount),
+    })),
+    ...(taxTotal > 0
+      ? [
+          {
+            accountId: vatAccount.id,
+            description: "IVA repercutido",
+            debit: "0.00",
+            credit: toMoneyString(taxTotal),
+          },
+        ]
+      : []),
+  ];
+
+  assertBalancedJournalLines(journalLines);
+
+  return tx.journalEntry.create({
     data: {
       companyId,
       invoiceId: invoice.id,
@@ -158,30 +238,7 @@ export async function createInvoiceIssuedJournalEntry(
         ? `Asiento de emisión de factura ${invoice.invoiceNumber}`
         : `Asiento de emisión de factura ${invoice.id}`,
       lines: {
-        create: [
-          {
-            accountId: clientAccount.id,
-            description: "Cliente por factura emitida",
-            debit: toMoneyString(total),
-            credit: "0.00",
-          },
-          ...Array.from(revenueGroups.values()).map((group) => ({
-            accountId: group.accountId,
-            description: group.description,
-            debit: "0.00",
-            credit: toMoneyString(group.amount),
-          })),
-          ...(taxTotal > 0
-            ? [
-                {
-                  accountId: vatAccount.id,
-                  description: "IVA repercutido",
-                  debit: "0.00",
-                  credit: toMoneyString(taxTotal),
-                },
-              ]
-            : []),
-        ],
+        create: journalLines,
       },
     },
     include: {
@@ -192,8 +249,6 @@ export async function createInvoiceIssuedJournalEntry(
       },
     },
   });
-
-  return journalEntry;
 }
 
 export async function createInvoicePaymentJournalEntry(
@@ -214,12 +269,32 @@ export async function createInvoicePaymentJournalEntry(
   const clientAccount = accounts["430"];
 
   if (!bankAccount || !clientAccount) {
-    throw new Error("Default accounting accounts could not be created");
+    throw new AccountingServiceError(
+      "Default accounting accounts could not be created",
+      500
+    );
   }
 
   const paymentAmount = toNumber(amount);
 
-  const journalEntry = await tx.journalEntry.create({
+  const journalLines: JournalLineInput[] = [
+    {
+      accountId: bankAccount.id,
+      description: "Entrada en banco por cobro de factura",
+      debit: toMoneyString(paymentAmount),
+      credit: "0.00",
+    },
+    {
+      accountId: clientAccount.id,
+      description: "Cancelación de deuda de cliente",
+      debit: "0.00",
+      credit: toMoneyString(paymentAmount),
+    },
+  ];
+
+  assertBalancedJournalLines(journalLines);
+
+  return tx.journalEntry.create({
     data: {
       companyId,
       invoiceId,
@@ -230,20 +305,7 @@ export async function createInvoicePaymentJournalEntry(
         ? `Asiento de cobro de factura ${invoiceNumber}`
         : `Asiento de cobro de factura ${invoiceId}`,
       lines: {
-        create: [
-          {
-            accountId: bankAccount.id,
-            description: "Entrada en banco por cobro de factura",
-            debit: toMoneyString(paymentAmount),
-            credit: "0.00",
-          },
-          {
-            accountId: clientAccount.id,
-            description: "Cancelación de deuda de cliente",
-            debit: "0.00",
-            credit: toMoneyString(paymentAmount),
-          },
-        ],
+        create: journalLines,
       },
     },
     include: {
@@ -254,25 +316,6 @@ export async function createInvoicePaymentJournalEntry(
       },
     },
   });
-
-  return journalEntry;
-}
-type ServiceContext = {
-  companyId: number;
-  userId: number | null;
-};
-
-type JournalEntryIdInput = {
-  journalEntryId: number;
-};
-
-export class AccountingServiceError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number
-  ) {
-    super(message);
-  }
 }
 
 export async function listAccountingAccounts(
