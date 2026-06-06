@@ -58,6 +58,18 @@ function clientName(client?: Client) {
   return client?.legalName ?? client?.name ?? "-";
 }
 
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    DRAFT: "Borrador",
+    ISSUED: "Emitida",
+    PARTIALLY_PAID: "Pago parcial",
+    PAID: "Pagada",
+    OVERDUE: "Vencida",
+    CANCELLED: "Cancelada",
+  };
+  return labels[status] ?? status;
+}
+
 function canIssue(invoice: Invoice) {
   return invoice.status === "DRAFT";
 }
@@ -76,12 +88,24 @@ function canPay(invoice: Invoice) {
 
 function entryBalance(entry: JournalEntry) {
   const debit = entry.lines.reduce((sum, line) => sum + Number(line.debit), 0);
-  const credit = entry.lines.reduce((sum, line) => sum + Number(line.credit), 0);
-  return {
-    debit,
-    credit,
-    balanced: debit.toFixed(2) === credit.toFixed(2),
-  };
+  const credit = entry.lines.reduce(
+    (sum, line) => sum + Number(line.credit),
+    0
+  );
+  return { debit, credit, balanced: debit.toFixed(2) === credit.toFixed(2) };
+}
+
+function draftTotals(form: InvoiceForm) {
+  const quantity = Number(form.quantity || 0);
+  const unitPrice = Number(form.unitPrice || 0);
+  const discountRate = Number(form.discountRate || 0);
+  const taxRate = Number(form.taxRate || 0);
+  const gross = quantity * unitPrice;
+  const discount = gross * (discountRate / 100);
+  const subtotal = gross - discount;
+  const tax = subtotal * (taxRate / 100);
+  const total = subtotal + tax;
+  return { subtotal, tax, total };
 }
 
 export function InvoicesPage({ token, notify }: Props) {
@@ -94,11 +118,18 @@ export function InvoicesPage({ token, notify }: Props) {
   const [form, setForm] = useState<InvoiceForm>(emptyForm);
   const [paymentAmount, setPaymentAmount] = useState("500");
   const [paymentReference, setPaymentReference] = useState("PAY-001");
-  const [paymentNotes, setPaymentNotes] = useState("Cobro registrado desde frontend");
+  const [paymentNotes, setPaymentNotes] = useState(
+    "Cobro registrado desde frontend"
+  );
+
+  const estimated = useMemo(() => draftTotals(form), [form]);
 
   const selectedInvoiceJournalEntries = useMemo(() => {
     if (!selectedInvoice) return [];
-    if (selectedInvoice.journalEntries && selectedInvoice.journalEntries.length > 0) {
+    if (
+      selectedInvoice.journalEntries &&
+      selectedInvoice.journalEntries.length > 0
+    ) {
       return selectedInvoice.journalEntries;
     }
     return journalEntries.filter(
@@ -116,7 +147,10 @@ export function InvoicesPage({ token, notify }: Props) {
     ] = await Promise.all([
       apiRequest<{ clients: Client[] }>("/api/clients", token),
       apiRequest<{ products: Product[] }>("/api/products", token),
-      apiRequest<{ invoiceSeries: InvoiceSeries[] }>("/api/invoice-series", token),
+      apiRequest<{ invoiceSeries: InvoiceSeries[] }>(
+        "/api/invoice-series",
+        token
+      ),
       apiRequest<{ invoices: Invoice[] }>("/api/invoices", token),
       apiRequest<{ journalEntries: AccountingEntry[] }>(
         "/api/accounting/journal-entries",
@@ -140,7 +174,9 @@ export function InvoicesPage({ token, notify }: Props) {
 
   useEffect(() => {
     loadAll().catch((error) =>
-      notify(error instanceof Error ? error.message : "Error cargando facturas")
+      notify(
+        error instanceof Error ? error.message : "Error cargando facturas"
+      )
     );
   }, []);
 
@@ -174,21 +210,23 @@ export function InvoicesPage({ token, notify }: Props) {
         discountRate: form.discountRate,
         taxRate: form.taxRate,
       };
-      if (form.productId) {
-        line.productId = Number(form.productId);
-      }
+      if (form.productId) line.productId = Number(form.productId);
 
-      const data = await apiRequest<{ invoice: Invoice }>("/api/invoices", token, {
-        method: "POST",
-        body: JSON.stringify({
-          clientId: Number(form.clientId),
-          invoiceSeriesId: Number(form.invoiceSeriesId),
-          type: "STANDARD",
-          dueDate: form.dueDate,
-          notes: form.notes,
-          lines: [line],
-        }),
-      });
+      const data = await apiRequest<{ invoice: Invoice }>(
+        "/api/invoices",
+        token,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            clientId: Number(form.clientId),
+            invoiceSeriesId: Number(form.invoiceSeriesId),
+            type: "STANDARD",
+            dueDate: form.dueDate,
+            notes: form.notes,
+            lines: [line],
+          }),
+        }
+      );
       setForm(emptyForm);
       notify(`Factura creada en borrador. ID ${data.invoice.id}`);
       await loadAll();
@@ -209,7 +247,9 @@ export function InvoicesPage({ token, notify }: Props) {
       await loadAll();
       await loadInvoice(invoice.id);
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Error emitiendo factura");
+      notify(
+        error instanceof Error ? error.message : "Error emitiendo factura"
+      );
     }
   }
 
@@ -246,7 +286,9 @@ export function InvoicesPage({ token, notify }: Props) {
       await loadAll();
       await loadInvoice(selectedInvoice.id);
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Error registrando cobro");
+      notify(
+        error instanceof Error ? error.message : "Error registrando cobro"
+      );
     }
   }
 
@@ -260,131 +302,142 @@ export function InvoicesPage({ token, notify }: Props) {
       );
       notify("Comprobante descargado");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Error descargando comprobante");
+      notify(
+        error instanceof Error ? error.message : "Error descargando comprobante"
+      );
     }
   }
 
   return (
     <section className="page-stack">
       <article className="card">
-        <h2>Nueva factura</h2>
-        <p className="muted">Crea una factura en borrador.</p>
-
-        <div className="form-grid">
-          <label>
-            Cliente
-            <select
-              value={form.clientId}
-              onChange={(e) => update("clientId", e.target.value)}
-            >
-              <option value="">Selecciona cliente</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {clientName(client)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Serie
-            <select
-              value={form.invoiceSeriesId}
-              onChange={(e) => update("invoiceSeriesId", e.target.value)}
-            >
-              <option value="">Selecciona serie</option>
-              {series.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.code} · {item.prefix}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Vencimiento
-            <input
-              type="date"
-              value={form.dueDate}
-              onChange={(e) => update("dueDate", e.target.value)}
-            />
-          </label>
-
-          <label>
-            Producto/servicio
-            <select
-              value={form.productId}
-              onChange={(e) => selectProduct(e.target.value)}
-            >
-              <option value="">Sin producto asociado</option>
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.code ? `${product.code} · ` : ""}
-                  {product.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="wide">
-            Descripción
-            <input
-              value={form.description}
-              onChange={(e) => update("description", e.target.value)}
-            />
-          </label>
-
-          <label>
-            Unidad
-            <input
-              value={form.unit}
-              onChange={(e) => update("unit", e.target.value)}
-            />
-          </label>
-
-          <label>
-            Cantidad
-            <input
-              value={form.quantity}
-              onChange={(e) => update("quantity", e.target.value)}
-            />
-          </label>
-
-          <label>
-            Precio
-            <input
-              value={form.unitPrice}
-              onChange={(e) => update("unitPrice", e.target.value)}
-            />
-          </label>
-
-          <label>
-            Descuento %
-            <input
-              value={form.discountRate}
-              onChange={(e) => update("discountRate", e.target.value)}
-            />
-          </label>
-
-          <label>
-            IVA %
-            <input
-              value={form.taxRate}
-              onChange={(e) => update("taxRate", e.target.value)}
-            />
-          </label>
-
-          <label className="wide">
-            Notas
-            <input
-              value={form.notes}
-              onChange={(e) => update("notes", e.target.value)}
-            />
-          </label>
+        <div className="section-header">
+          <div>
+            <h2>Nueva factura</h2>
+            <p className="muted">
+              Crea un borrador seleccionando cliente, serie y línea facturable.
+            </p>
+          </div>
         </div>
-
-        <div className="actions-right">
-          <button onClick={createInvoice}>Crear factura</button>
+        <div className="invoice-builder">
+          <div className="form-grid">
+            <label>
+              Cliente
+              <select
+                value={form.clientId}
+                onChange={(e) => update("clientId", e.target.value)}
+              >
+                <option value="">Selecciona cliente</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {clientName(client)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Serie
+              <select
+                value={form.invoiceSeriesId}
+                onChange={(e) => update("invoiceSeriesId", e.target.value)}
+              >
+                <option value="">Selecciona serie</option>
+                {series.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.code} · {item.prefix}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Vencimiento
+              <input
+                type="date"
+                value={form.dueDate}
+                onChange={(e) => update("dueDate", e.target.value)}
+              />
+            </label>
+            <label>
+              Producto/servicio
+              <select
+                value={form.productId}
+                onChange={(e) => selectProduct(e.target.value)}
+              >
+                <option value="">Sin producto asociado</option>
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.code ? `${product.code} · ` : ""}
+                    {product.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="wide">
+              Descripción
+              <input
+                value={form.description}
+                onChange={(e) => update("description", e.target.value)}
+              />
+            </label>
+            <label>
+              Unidad
+              <input
+                value={form.unit}
+                onChange={(e) => update("unit", e.target.value)}
+              />
+            </label>
+            <label>
+              Cantidad
+              <input
+                value={form.quantity}
+                onChange={(e) => update("quantity", e.target.value)}
+              />
+            </label>
+            <label>
+              Precio
+              <input
+                value={form.unitPrice}
+                onChange={(e) => update("unitPrice", e.target.value)}
+              />
+            </label>
+            <label>
+              Descuento %
+              <input
+                value={form.discountRate}
+                onChange={(e) => update("discountRate", e.target.value)}
+              />
+            </label>
+            <label>
+              IVA %
+              <input
+                value={form.taxRate}
+                onChange={(e) => update("taxRate", e.target.value)}
+              />
+            </label>
+            <label className="wide">
+              Notas
+              <input
+                value={form.notes}
+                onChange={(e) => update("notes", e.target.value)}
+              />
+            </label>
+          </div>
+          <aside className="invoice-estimate">
+            <span>Resumen estimado</span>
+            <div>
+              <small>Base imponible</small>
+              <strong>{money(estimated.subtotal)}</strong>
+            </div>
+            <div>
+              <small>IVA</small>
+              <strong>{money(estimated.tax)}</strong>
+            </div>
+            <div className="estimate-total">
+              <small>Total</small>
+              <strong>{money(estimated.total)}</strong>
+            </div>
+            <button onClick={createInvoice}>Crear factura</button>
+          </aside>
         </div>
       </article>
 
@@ -392,11 +445,10 @@ export function InvoicesPage({ token, notify }: Props) {
         <div className="section-header">
           <div>
             <h2>Facturas</h2>
-            <p className="muted">Emite, consulta, cobra y descarga PDFs.</p>
+            <p className="muted">Emite, consulta, cobra y descarga documentos.</p>
           </div>
           <button onClick={loadAll}>Refrescar</button>
         </div>
-
         <table>
           <thead>
             <tr>
@@ -418,7 +470,7 @@ export function InvoicesPage({ token, notify }: Props) {
                 <td>{clientName(invoice.client)}</td>
                 <td>
                   <span className={`status ${invoice.status}`}>
-                    {invoice.status}
+                    {statusLabel(invoice.status)}
                   </span>
                 </td>
                 <td>{money(invoice.total)}</td>
@@ -426,7 +478,9 @@ export function InvoicesPage({ token, notify }: Props) {
                 <td>{money(invoice.amountDue)}</td>
                 <td>
                   <div className="row-actions">
-                    <button onClick={() => loadInvoice(invoice.id)}>Ver</button>
+                    <button onClick={() => loadInvoice(invoice.id)}>
+                      Ver detalle
+                    </button>
                     <button
                       disabled={!canIssue(invoice)}
                       onClick={() => issueInvoice(invoice)}
@@ -437,7 +491,7 @@ export function InvoicesPage({ token, notify }: Props) {
                       disabled={!canDownloadInvoicePdf(invoice)}
                       onClick={() => downloadInvoice(invoice)}
                     >
-                      PDF
+                      PDF factura
                     </button>
                   </div>
                 </td>
@@ -455,176 +509,194 @@ export function InvoicesPage({ token, notify }: Props) {
       </article>
 
       {selectedInvoice && (
-        <article className="card">
-          <div className="section-header">
+        <article className="card invoice-detail-card">
+          <div className="invoice-detail-header">
             <div>
-              <h2>Factura #{selectedInvoice.id}</h2>
-              <p className="muted">
-                {selectedInvoice.invoiceNumber ?? "Sin número"} ·{" "}
-                {selectedInvoice.status}
+              <span className={`status ${selectedInvoice.status}`}>
+                {statusLabel(selectedInvoice.status)}
+              </span>
+              <h2>
+                {selectedInvoice.invoiceNumber ??
+                  `Factura borrador #${selectedInvoice.id}`}
+              </h2>
+              <p>
+                Cliente:{" "}
+                <strong>{clientName(selectedInvoice.client)}</strong>
               </p>
             </div>
-            <div className="row-actions">
+            <div className="invoice-detail-actions">
               <button
                 disabled={!canIssue(selectedInvoice)}
                 onClick={() => issueInvoice(selectedInvoice)}
               >
-                Emitir
+                Emitir factura
               </button>
               <button
                 disabled={!canDownloadInvoicePdf(selectedInvoice)}
                 onClick={() => downloadInvoice(selectedInvoice)}
               >
-                Factura PDF
+                Descargar factura PDF
               </button>
             </div>
           </div>
 
-          <div className="summary-grid">
-            <div>
-              <span>Cliente</span>
-              <strong>{clientName(selectedInvoice.client)}</strong>
-            </div>
+          <div className="invoice-metrics">
             <div>
               <span>Total</span>
               <strong>{money(selectedInvoice.total)}</strong>
             </div>
             <div>
-              <span>Pagado</span>
+              <span>Cobrado</span>
               <strong>{money(selectedInvoice.amountPaid)}</strong>
             </div>
             <div>
               <span>Pendiente</span>
               <strong>{money(selectedInvoice.amountDue)}</strong>
             </div>
+            <div>
+              <span>Vencimiento</span>
+              <strong>{formatDate(selectedInvoice.dueDate ?? null)}</strong>
+            </div>
           </div>
 
-          <h3>Líneas</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Descripción</th>
-                <th>Cantidad</th>
-                <th>Precio</th>
-                <th>Dto.</th>
-                <th>IVA</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(selectedInvoice.lines ?? []).map((line) => (
-                <tr key={line.id}>
-                  <td>{line.lineNumber}</td>
-                  <td>{line.description}</td>
-                  <td>{line.quantity}</td>
-                  <td>{money(line.unitPrice)}</td>
-                  <td>{Number(line.discountRate).toFixed(2)}%</td>
-                  <td>{Number(line.taxRate).toFixed(2)}%</td>
-                  <td>{money(line.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <h3>Registrar cobro</h3>
-          <div className="payment-form">
-            <input
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              placeholder="Importe"
-            />
-            <input
-              value={paymentReference}
-              onChange={(e) => setPaymentReference(e.target.value)}
-              placeholder="Referencia"
-            />
-            <input
-              value={paymentNotes}
-              onChange={(e) => setPaymentNotes(e.target.value)}
-              placeholder="Notas"
-            />
-            <button disabled={!canPay(selectedInvoice)} onClick={registerPayment}>
-              Registrar cobro
-            </button>
-          </div>
-
-          <h3>Cobros</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Método</th>
-                <th>Referencia</th>
-                <th>Importe</th>
-                <th>PDF</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(selectedInvoice.payments ?? []).map((payment) => (
-                <tr key={payment.id}>
-                  <td>{payment.id}</td>
-                  <td>{formatDate(payment.paymentDate)}</td>
-                  <td>{payment.method}</td>
-                  <td>{payment.reference ?? "-"}</td>
-                  <td>{money(payment.amount)}</td>
-                  <td>
-                    <button onClick={() => downloadPaymentReceipt(payment)}>
-                      Comprobante
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {(selectedInvoice.payments ?? []).length === 0 && (
+          <section className="detail-block">
+            <h3>Líneas de factura</h3>
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={6} className="empty">
-                    No hay cobros registrados.
-                  </td>
+                  <th>#</th>
+                  <th>Descripción</th>
+                  <th>Cantidad</th>
+                  <th>Precio</th>
+                  <th>Dto.</th>
+                  <th>IVA</th>
+                  <th>Total</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(selectedInvoice.lines ?? []).map((line) => (
+                  <tr key={line.id}>
+                    <td>{line.lineNumber}</td>
+                    <td>{line.description}</td>
+                    <td>{line.quantity}</td>
+                    <td>{money(line.unitPrice)}</td>
+                    <td>{Number(line.discountRate).toFixed(2)}%</td>
+                    <td>{Number(line.taxRate).toFixed(2)}%</td>
+                    <td>{money(line.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
 
-          <h3>Asientos contables</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Fuente</th>
-                <th>Descripción</th>
-                <th>Debe</th>
-                <th>Haber</th>
-                <th>Validación</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedInvoiceJournalEntries.map((entry) => {
-                const balance = entryBalance(entry);
-                return (
-                  <tr key={entry.id}>
-                    <td>{entry.id}</td>
-                    <td>{entry.source}</td>
-                    <td>{entry.description ?? "-"}</td>
-                    <td>{money(balance.debit)}</td>
-                    <td>{money(balance.credit)}</td>
+          <section className="detail-block">
+            <div className="section-header compact">
+              <div>
+                <h3>Cobros</h3>
+                <p className="muted">Registra pagos parciales o completos.</p>
+              </div>
+            </div>
+            <div className="payment-form">
+              <input
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="Importe"
+              />
+              <input
+                value={paymentReference}
+                onChange={(e) => setPaymentReference(e.target.value)}
+                placeholder="Referencia"
+              />
+              <input
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                placeholder="Notas"
+              />
+              <button
+                disabled={!canPay(selectedInvoice)}
+                onClick={registerPayment}
+              >
+                Registrar cobro
+              </button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Fecha</th>
+                  <th>Método</th>
+                  <th>Referencia</th>
+                  <th>Importe</th>
+                  <th>Documento</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(selectedInvoice.payments ?? []).map((payment) => (
+                  <tr key={payment.id}>
+                    <td>{payment.id}</td>
+                    <td>{formatDate(payment.paymentDate)}</td>
+                    <td>{payment.method}</td>
+                    <td>{payment.reference ?? "-"}</td>
+                    <td>{money(payment.amount)}</td>
                     <td>
-                      <span className={balance.balanced ? "ok" : "bad"}>
-                        {balance.balanced ? "CUADRADO" : "NO CUADRADO"}
-                      </span>
+                      <button onClick={() => downloadPaymentReceipt(payment)}>
+                        Comprobante PDF
+                      </button>
                     </td>
                   </tr>
-                );
-              })}
-              {selectedInvoiceJournalEntries.length === 0 && (
+                ))}
+                {(selectedInvoice.payments ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="empty">
+                      No hay cobros registrados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+
+          <section className="detail-block">
+            <h3>Asientos contables</h3>
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={6} className="empty">
-                    No hay asientos asociados todavía.
-                  </td>
+                  <th>ID</th>
+                  <th>Fuente</th>
+                  <th>Descripción</th>
+                  <th>Debe</th>
+                  <th>Haber</th>
+                  <th>Validación</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {selectedInvoiceJournalEntries.map((entry) => {
+                  const balance = entryBalance(entry);
+                  return (
+                    <tr key={entry.id}>
+                      <td>{entry.id}</td>
+                      <td>{entry.source}</td>
+                      <td>{entry.description ?? "-"}</td>
+                      <td>{money(balance.debit)}</td>
+                      <td>{money(balance.credit)}</td>
+                      <td>
+                        <span className={balance.balanced ? "ok" : "bad"}>
+                          {balance.balanced ? "CUADRADO" : "NO CUADRADO"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {selectedInvoiceJournalEntries.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="empty">
+                      No hay asientos asociados todavía.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </section>
         </article>
       )}
     </section>

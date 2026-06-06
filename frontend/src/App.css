@@ -550,3 +550,230 @@ h3 {
     grid-column: span 1;
   }
 }
+.invoice-builder {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 18px;
+  align-items: start;
+}
+
+.invoice-estimate {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  background: #f9fafb;
+  display: grid;
+  gap: 12px;
+}
+
+.invoice-estimate > span {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.invoice-estimate div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.invoice-estimate small {
+  color: #6b7280;
+}
+
+.invoice-estimate strong {
+  font-size: 15px;
+}
+
+.invoice-estimate .estimate-total {
+  border-bottom: 0;
+}
+
+.invoice-estimate .estimate-total strong {
+  font-size: 20px;
+}
+
+.invoice-detail-card {
+  border: 1px solid #dbeafe;
+}
+
+.invoice-detail-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.invoice-detail-header h2 {
+  margin: 10px 0 6px;
+  font-size: 28px;
+}
+
+.invoice-detail-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.invoice-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.invoice-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 18px 0 22px;
+}
+
+.invoice-metrics div {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.invoice-metrics span {
+  display: block;
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.invoice-metrics strong {
+  font-size: 18px;
+}
+
+.detail-block {
+  margin-top: 24px;
+}
+
+.section-header.compact {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 1000px) {
+  .invoice-builder,
+  .invoice-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-detail-header {
+    display: grid;
+  }
+
+  .invoice-detail-actions {
+    justify-content: flex-start;
+  }
+}
+/* Layout hard reset */
+.app-layout {
+  width: 100vw;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.content {
+  width: 100%;
+  min-width: 0;
+  padding: 28px;
+  overflow-x: auto;
+}
+
+/* Evitar textos centrados raros heredados */
+.card,
+.card * {
+  text-align: left;
+}
+
+.card h2,
+.card h3,
+.form-grid label {
+  color: #111827;
+}
+
+/* Formularios claros dentro del panel */
+.form-grid input,
+.form-grid select,
+.payment-form input,
+.payment-form select {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+}
+
+.form-grid input:focus,
+.form-grid select:focus,
+.payment-form input:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.25);
+  border-color: #2563eb;
+}
+
+/* Nueva factura: evitar que el resumen se corte */
+.invoice-builder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+.invoice-builder .form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.invoice-estimate {
+  min-width: 260px;
+  overflow: hidden;
+}
+
+.invoice-estimate div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.invoice-estimate strong {
+  white-space: nowrap;
+}
+
+/* Tablas más contenidas */
+table {
+  table-layout: auto;
+}
+
+th,
+td {
+  white-space: nowrap;
+}
+
+td:nth-child(3),
+td:nth-child(4) {
+  white-space: normal;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-builder {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-builder .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid .wide {
+    grid-column: span 1;
+  }
+}
