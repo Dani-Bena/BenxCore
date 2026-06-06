@@ -5,8 +5,17 @@ import type { LoginInput, RegisterInput } from "./auth.schemas.js";
 
 type AuthTokenPayload = {
   userId: number;
-  companyId: number | null;
+  companyId: number;
   role: string;
+};
+
+type SanitizedUserInput = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  companyId: number;
 };
 
 export class AuthServiceError extends Error {
@@ -30,18 +39,13 @@ function createToken(payload: AuthTokenPayload): string {
   });
 }
 
-function sanitizeUser(user: {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  companyId: number | null;
-}) {
+function sanitizeUser(user: SanitizedUserInput) {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
+    active: user.active,
     companyId: user.companyId,
   };
 }
@@ -68,6 +72,7 @@ export async function registerUser(data: RegisterInput) {
           email,
           passwordHash,
           role: "ADMIN",
+          active: true,
         },
       },
     },
@@ -107,8 +112,12 @@ export async function loginUser(data: LoginInput) {
     },
   });
 
-  if (!user) {
+  if (!user || !user.active) {
     throw new AuthServiceError("Invalid credentials", 401);
+  }
+
+  if (!user.companyId) {
+    throw new AuthServiceError("User has no company assigned", 401);
   }
 
   const validPassword = await bcrypt.compare(password, user.passwordHash);
@@ -143,11 +152,20 @@ export async function getCurrentUser(userId: number) {
     throw new AuthServiceError("User not found", 404);
   }
 
+  if (!user.active) {
+    throw new AuthServiceError("User is inactive", 403);
+  }
+
+  if (!user.companyId) {
+    throw new AuthServiceError("User has no company assigned", 401);
+  }
+
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
+    active: user.active,
     companyId: user.companyId,
     company: user.company,
   };

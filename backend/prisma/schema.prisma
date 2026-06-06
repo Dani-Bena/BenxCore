@@ -9,6 +9,11 @@ datasource db {
 
 enum UserRole {
   ADMIN
+  ACCOUNTANT
+  MANAGER
+  VIEWER
+
+  // Rol antiguo conservado para no romper datos ya existentes.
   USER
 }
 
@@ -62,6 +67,7 @@ enum AuditAction {
   CANCEL
   PAY
 }
+
 enum ClientType {
   COMPANY
   FREELANCER
@@ -104,48 +110,54 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
-  role         UserRole @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         UserRole @default(VIEWER)
+  active       Boolean  @default(true)
 
-  companyId    Int?
-  company      Company? @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  auditLogs    AuditLog[]
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  auditLogs AuditLog[]
+
+  @@index([companyId])
+  @@index([companyId, active])
+  @@index([companyId, role])
 }
 
 model Client {
-  id        Int        @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  legalName  String   @map("name")
-  tradeName  String?
-  type       ClientType @default(COMPANY)
+  legalName String     @map("name")
+  tradeName String?
+  type      ClientType @default(COMPANY)
 
-  taxId      String?  @map("nif")
-  taxIdType  TaxIdType @default(CIF)
+  taxId     String?   @map("nif")
+  taxIdType TaxIdType @default(CIF)
 
   email          String?
   invoicingEmail String?
   phone          String?
   contactName    String?
 
-  address    String?
-  city       String?
-  province   String?
-  postalCode String?
+  address     String?
+  city        String?
+  province    String?
+  postalCode  String?
   countryCode String @default("ES")
 
-  paymentTermsDays Int @default(0)
+  paymentTermsDays Int     @default(0)
   notes            String?
 
-  active    Boolean  @default(true)
+  active   Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   companyId Int
   company   Company @relation(fields: [companyId], references: [id])
 
-  invoices  Invoice[]
+  invoices Invoice[]
 
   @@index([companyId])
   @@index([companyId, active])
@@ -153,25 +165,25 @@ model Client {
 }
 
 model Product {
-  id          Int         @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   code        String?
   name        String
   description String?
 
-  type        ProductType @default(SERVICE)
+  type ProductType @default(SERVICE)
 
-  unit        String      @default("unit")
-  price       Decimal     @db.Decimal(10, 2)
-  costPrice   Decimal?    @db.Decimal(10, 2)
-  taxRate     Decimal     @default(21) @db.Decimal(5, 2)
+  unit      String   @default("unit")
+  price     Decimal  @db.Decimal(10, 2)
+  costPrice Decimal? @db.Decimal(10, 2)
+  taxRate   Decimal  @default(21) @db.Decimal(5, 2)
 
-  active      Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  companyId   Int
-  company     Company @relation(fields: [companyId], references: [id])
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
 
   revenueAccountId Int?
   revenueAccount   AccountingAccount? @relation("ProductRevenueAccount", fields: [revenueAccountId], references: [id])
@@ -194,30 +206,30 @@ model InvoiceSeries {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  companyId     Int
-  company       Company @relation(fields: [companyId], references: [id])
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
 
-  invoices      Invoice[]
+  invoices Invoice[]
 
   @@unique([companyId, code])
 }
 
 model Invoice {
-  id            Int           @id @default(autoincrement())
-  type          InvoiceType   @default(STANDARD)
-  status        InvoiceStatus @default(DRAFT)
+  id     Int           @id @default(autoincrement())
+  type   InvoiceType   @default(STANDARD)
+  status InvoiceStatus @default(DRAFT)
 
   invoiceNumber String?
   issueDate     DateTime?
   dueDate       DateTime?
 
-  subtotal      Decimal       @default(0) @db.Decimal(10, 2)
-  taxTotal      Decimal       @default(0) @db.Decimal(10, 2)
-  total         Decimal       @default(0) @db.Decimal(10, 2)
-  amountPaid    Decimal       @default(0) @db.Decimal(10, 2)
-  amountDue     Decimal       @default(0) @db.Decimal(10, 2)
+  subtotal   Decimal @default(0) @db.Decimal(10, 2)
+  taxTotal   Decimal @default(0) @db.Decimal(10, 2)
+  total      Decimal @default(0) @db.Decimal(10, 2)
+  amountPaid Decimal @default(0) @db.Decimal(10, 2)
+  amountDue  Decimal @default(0) @db.Decimal(10, 2)
 
-  notes         String?
+  notes String?
 
   issuerName    String?
   issuerNif     String?
@@ -231,14 +243,14 @@ model Invoice {
   customerEmail   String?
   customerPhone   String?
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  companyId     Int
-  company       Company @relation(fields: [companyId], references: [id])
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
 
-  clientId      Int
-  client        Client @relation(fields: [clientId], references: [id])
+  clientId Int
+  client   Client @relation(fields: [clientId], references: [id])
 
   invoiceSeriesId Int?
   invoiceSeries   InvoiceSeries? @relation(fields: [invoiceSeriesId], references: [id])
@@ -247,20 +259,20 @@ model Invoice {
   rectifiesInvoice   Invoice?  @relation("InvoiceRectification", fields: [rectifiesInvoiceId], references: [id])
   correctiveInvoices Invoice[] @relation("InvoiceRectification")
 
-  lines         InvoiceLine[]
-  taxSummaries  InvoiceTaxSummary[]
-  payments      Payment[]
+  lines          InvoiceLine[]
+  taxSummaries   InvoiceTaxSummary[]
+  payments       Payment[]
   journalEntries JournalEntry[] @relation("InvoiceJournalEntries")
 
   @@unique([companyId, invoiceNumber])
 }
 
 model InvoiceLine {
-  id          Int     @id @default(autoincrement())
-  lineNumber  Int
+  id         Int @id @default(autoincrement())
+  lineNumber Int
 
   description String
-  unit        String  @default("unit")
+  unit        String @default("unit")
 
   quantity       Decimal @db.Decimal(10, 2)
   unitPrice      Decimal @db.Decimal(10, 2)
@@ -272,11 +284,11 @@ model InvoiceLine {
   taxAmount Decimal @db.Decimal(10, 2)
   total     Decimal @db.Decimal(10, 2)
 
-  invoiceId   Int
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  productId   Int?
-  product     Product? @relation(fields: [productId], references: [id])
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id])
 
   @@unique([invoiceId, lineNumber])
 }
@@ -303,8 +315,8 @@ model Payment {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  invoiceId   Int
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   journalEntries JournalEntry[] @relation("PaymentJournalEntries")
 }
@@ -321,7 +333,7 @@ model AccountingAccount {
   companyId Int
   company   Company @relation(fields: [companyId], references: [id])
 
-  journalLines JournalLine[]
+  journalLines        JournalLine[]
   productRevenueLinks Product[] @relation("ProductRevenueAccount")
 
   @@unique([companyId, code])
@@ -336,16 +348,16 @@ model JournalEntry {
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
-  companyId   Int
-  company     Company @relation(fields: [companyId], references: [id])
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
 
-  invoiceId   Int?
-  invoice     Invoice? @relation("InvoiceJournalEntries", fields: [invoiceId], references: [id])
+  invoiceId Int?
+  invoice   Invoice? @relation("InvoiceJournalEntries", fields: [invoiceId], references: [id])
 
-  paymentId   Int?
-  payment     Payment? @relation("PaymentJournalEntries", fields: [paymentId], references: [id])
+  paymentId Int?
+  payment   Payment? @relation("PaymentJournalEntries", fields: [paymentId], references: [id])
 
-  lines       JournalLine[]
+  lines JournalLine[]
 }
 
 model JournalLine {
@@ -357,8 +369,8 @@ model JournalLine {
   journalEntryId Int
   journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
 
-  accountId   Int
-  account     AccountingAccount @relation(fields: [accountId], references: [id])
+  accountId Int
+  account   AccountingAccount @relation(fields: [accountId], references: [id])
 }
 
 model AuditLog {
@@ -370,9 +382,9 @@ model AuditLog {
   newValue   Json?
   createdAt  DateTime    @default(now())
 
-  companyId  Int?
-  company    Company? @relation(fields: [companyId], references: [id])
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
 
-  userId     Int?
-  user       User? @relation(fields: [userId], references: [id])
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id])
 }
