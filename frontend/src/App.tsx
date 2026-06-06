@@ -6,9 +6,16 @@ import { InvoicesPage } from "./pages/InvoicesPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { SeriesPage } from "./pages/SeriesPage";
+import { UsersPage } from "./pages/UsersPage";
 import type { User } from "./types";
 
-type Page = "dashboard" | "clients" | "products" | "series" | "invoices";
+type Page =
+  | "dashboard"
+  | "clients"
+  | "products"
+  | "series"
+  | "invoices"
+  | "users";
 
 export default function App() {
   const [token, setToken] = useState("");
@@ -86,6 +93,13 @@ export default function App() {
           >
             Facturas
           </button>
+
+          <button
+            className={page === "users" ? "active" : ""}
+            onClick={() => setPage("users")}
+          >
+            Usuarios
+          </button>
         </nav>
 
         {message && <div className="message">{message}</div>}
@@ -111,6 +125,8 @@ export default function App() {
         {page === "invoices" && (
           <InvoicesPage token={token} notify={setMessage} />
         )}
+
+        {page === "users" && <UsersPage token={token} notify={setMessage} />}
       </section>
     </main>
   );
