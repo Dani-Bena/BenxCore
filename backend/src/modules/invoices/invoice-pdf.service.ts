@@ -1,5 +1,7 @@
 import { createRequire } from "node:module";
 import { prisma } from "../../lib/prisma.js";
+import { drawCompanyLogo } from "../../utils/pdf-logo.js";
+import { PDF_FONT, PDF_SIZE } from "../../utils/pdf-style.js";
 import { InvoiceServiceError } from "./invoices.service.js";
 
 const require = createRequire(import.meta.url);
@@ -43,12 +45,9 @@ function collectPdfBuffer(doc: any): Promise<Buffer> {
 }
 
 function drawSectionTitle(doc: any, title: string, y: number): number {
-  doc.font("Helvetica-Bold").fontSize(11).text(title, 40, y);
+  doc.font(PDF_FONT.bold).fontSize(PDF_SIZE.sectionTitle).text(title, 40, y);
 
-  doc
-    .moveTo(40, y + 16)
-    .lineTo(555, y + 16)
-    .stroke();
+  doc.moveTo(40, y + 16).lineTo(555, y + 16).stroke();
 
   return y + 28;
 }
@@ -61,11 +60,11 @@ function drawLabelValue(
   y: number,
   labelWidth = 85
 ): number {
-  doc.font("Helvetica-Bold").fontSize(9).text(label, x, y);
+  doc.font(PDF_FONT.bold).fontSize(PDF_SIZE.label).text(label, x, y);
 
   doc
-    .font("Helvetica")
-    .fontSize(9)
+    .font(PDF_FONT.regular)
+    .fontSize(PDF_SIZE.body)
     .text(
       value == null || value === "" ? "-" : String(value),
       x + labelWidth,
@@ -133,7 +132,6 @@ export async function generateInvoicePdf(
   const { invoiceId } = input;
 
   const invoice = await findInvoiceForPdf(companyId, invoiceId);
-
   const invoiceNumber = invoice.invoiceNumber;
 
   if (!invoiceNumber) {
@@ -152,18 +150,46 @@ export async function generateInvoicePdf(
 
   const pdfPromise = collectPdfBuffer(doc);
 
-  // Header
-  doc.font("Helvetica-Bold").fontSize(22).text("FACTURA", 40, 40);
+  drawCompanyLogo(doc, {
+    x: 40,
+    y: 30,
+    width: 125,
+    height: 65,
+  });
 
-  doc.font("Helvetica").fontSize(10);
-  doc.text(`Numero: ${invoiceNumber}`, 380, 45);
-  doc.text(`Fecha: ${formatDate(invoice.issueDate)}`, 380, 60);
-  doc.text(`Vencimiento: ${formatDate(invoice.dueDate)}`, 380, 75);
-  doc.text(`Estado: ${invoice.status}`, 380, 90);
+  doc
+    .font(PDF_FONT.bold)
+    .fontSize(PDF_SIZE.title)
+    .text("FACTURA", 380, 42, {
+      width: 175,
+      align: "right",
+      lineBreak: false,
+    });
 
-  let y = 125;
+  doc.font(PDF_FONT.regular).fontSize(PDF_SIZE.headerMeta);
 
-  // Fiscal data
+  doc.text(`Numero: ${invoiceNumber}`, 380, 66, {
+    width: 175,
+    align: "right",
+  });
+
+  doc.text(`Fecha: ${formatDate(invoice.issueDate)}`, 380, 81, {
+    width: 175,
+    align: "right",
+  });
+
+  doc.text(`Vencimiento: ${formatDate(invoice.dueDate)}`, 380, 96, {
+    width: 175,
+    align: "right",
+  });
+
+  doc.text(`Estado: ${invoice.status}`, 380, 111, {
+    width: 175,
+    align: "right",
+  });
+
+  let y = 145;
+
   y = drawSectionTitle(doc, "Datos fiscales", y);
 
   const leftX = 40;
@@ -172,7 +198,7 @@ export async function generateInvoicePdf(
   let leftY = y;
   let rightY = y;
 
-  doc.font("Helvetica-Bold").fontSize(10).text("Emisor", leftX, leftY);
+  doc.font(PDF_FONT.bold).fontSize(PDF_SIZE.sectionTitle).text("Emisor", leftX, leftY);
   leftY += 18;
   leftY = drawLabelValue(doc, "Nombre", invoice.issuerName, leftX, leftY);
   leftY = drawLabelValue(doc, "NIF", invoice.issuerNif, leftX, leftY);
@@ -180,7 +206,7 @@ export async function generateInvoicePdf(
   leftY = drawLabelValue(doc, "Email", invoice.issuerEmail, leftX, leftY);
   leftY = drawLabelValue(doc, "Telefono", invoice.issuerPhone, leftX, leftY);
 
-  doc.font("Helvetica-Bold").fontSize(10).text("Cliente", rightX, rightY);
+  doc.font(PDF_FONT.bold).fontSize(PDF_SIZE.sectionTitle).text("Cliente", rightX, rightY);
   rightY += 18;
   rightY = drawLabelValue(doc, "Nombre", invoice.customerName, rightX, rightY);
   rightY = drawLabelValue(doc, "NIF", invoice.customerNif, rightX, rightY);
@@ -202,7 +228,6 @@ export async function generateInvoicePdf(
 
   y = Math.max(leftY, rightY) + 20;
 
-  // Lines table
   y = drawSectionTitle(doc, "Lineas de factura", y);
 
   const columns = {
@@ -215,7 +240,7 @@ export async function generateInvoicePdf(
     total: 485,
   };
 
-  doc.font("Helvetica-Bold").fontSize(8);
+  doc.font(PDF_FONT.bold).fontSize(PDF_SIZE.tableHeader);
   doc.text("#", columns.line, y);
   doc.text("Descripcion", columns.description, y);
   doc.text("Cant.", columns.qty, y, { width: 40, align: "right" });
@@ -228,7 +253,7 @@ export async function generateInvoicePdf(
   doc.moveTo(40, y).lineTo(555, y).stroke();
   y += 8;
 
-  doc.font("Helvetica").fontSize(8);
+  doc.font(PDF_FONT.regular).fontSize(PDF_SIZE.tableBody);
 
   for (const line of invoice.lines) {
     y = ensurePageSpace(doc, y, 30);
@@ -266,10 +291,9 @@ export async function generateInvoicePdf(
 
   y += 10;
 
-  // Tax summary
   y = drawSectionTitle(doc, "Resumen de impuestos", y);
 
-  doc.font("Helvetica-Bold").fontSize(8);
+  doc.font(PDF_FONT.bold).fontSize(PDF_SIZE.tableHeader);
   doc.text("IVA", 350, y, { width: 50, align: "right" });
   doc.text("Base", 410, y, { width: 60, align: "right" });
   doc.text("Cuota", 485, y, { width: 70, align: "right" });
@@ -278,7 +302,7 @@ export async function generateInvoicePdf(
   doc.moveTo(350, y).lineTo(555, y).stroke();
   y += 8;
 
-  doc.font("Helvetica").fontSize(8);
+  doc.font(PDF_FONT.regular).fontSize(PDF_SIZE.tableBody);
 
   for (const taxSummary of invoice.taxSummaries) {
     y = ensurePageSpace(doc, y, 22);
@@ -303,12 +327,11 @@ export async function generateInvoicePdf(
 
   y += 10;
 
-  // Totals
   y = ensurePageSpace(doc, y, 70);
 
   const totalsX = 370;
 
-  doc.font("Helvetica-Bold").fontSize(10);
+  doc.font(PDF_FONT.bold).fontSize(PDF_SIZE.sectionTitle);
   y = drawLabelValue(
     doc,
     "Subtotal",
@@ -320,21 +343,19 @@ export async function generateInvoicePdf(
   y = drawLabelValue(doc, "IVA", formatMoney(invoice.taxTotal), totalsX, y, 90);
   y = drawLabelValue(doc, "Total", formatMoney(invoice.total), totalsX, y, 90);
 
-  // Notes
   if (invoice.notes) {
     y += 20;
     y = ensurePageSpace(doc, y, 50);
     y = drawSectionTitle(doc, "Notas", y);
 
-    doc.font("Helvetica").fontSize(9).text(invoice.notes, 40, y, {
+    doc.font(PDF_FONT.regular).fontSize(PDF_SIZE.body).text(invoice.notes, 40, y, {
       width: 515,
     });
   }
 
-  // Footer
   doc
-    .font("Helvetica")
-    .fontSize(8)
+    .font(PDF_FONT.regular)
+    .fontSize(PDF_SIZE.footer)
     .text("Documento generado por BenxCore", 40, 790, {
       align: "center",
       width: 515,

@@ -1,5 +1,7 @@
 import { createRequire } from "node:module";
 import { prisma } from "../../lib/prisma.js";
+import { drawCompanyLogo } from "../../utils/pdf-logo.js";
+import { PDF_FONT, PDF_SIZE } from "../../utils/pdf-style.js";
 import { InvoiceServiceError } from "./invoices.service.js";
 
 const require = createRequire(import.meta.url);
@@ -44,12 +46,9 @@ function collectPdfBuffer(doc: any): Promise<Buffer> {
 }
 
 function drawSectionTitle(doc: any, title: string, y: number): number {
-  doc.font("Helvetica-Bold").fontSize(11).text(title, 40, y);
+  doc.font(PDF_FONT.bold).fontSize(PDF_SIZE.sectionTitle).text(title, 40, y);
 
-  doc
-    .moveTo(40, y + 16)
-    .lineTo(555, y + 16)
-    .stroke();
+  doc.moveTo(40, y + 16).lineTo(555, y + 16).stroke();
 
   return y + 28;
 }
@@ -62,19 +61,14 @@ function drawLabelValue(
   y: number,
   labelWidth = 115
 ): number {
-  doc.font("Helvetica-Bold").fontSize(9).text(label, x, y);
+  doc.font(PDF_FONT.bold).fontSize(PDF_SIZE.label).text(label, x, y);
 
   doc
-    .font("Helvetica")
-    .fontSize(9)
-    .text(
-      value == null || value === "" ? "-" : String(value),
-      x + labelWidth,
-      y,
-      {
-        width: 360,
-      }
-    );
+    .font(PDF_FONT.regular)
+    .fontSize(PDF_SIZE.body)
+    .text(value == null || value === "" ? "-" : String(value), x + labelWidth, y, {
+      width: 360,
+    });
 
   return y + 16;
 }
@@ -144,14 +138,40 @@ export async function generatePaymentReceiptPdf(
 
   const pdfPromise = collectPdfBuffer(doc);
 
-  doc.font("Helvetica-Bold").fontSize(20).text("COMPROBANTE DE PAGO", 40, 40);
+  drawCompanyLogo(doc, {
+    x: 40,
+    y: 30,
+    width: 115,
+    height: 70,
+  });
 
-  doc.font("Helvetica").fontSize(10);
-  doc.text(`Comprobante: ${receiptNumber}`, 360, 45);
-  doc.text(`Factura: ${invoiceNumber}`, 360, 60);
-  doc.text(`Fecha pago: ${formatDate(payment.paymentDate)}`, 360, 75);
+  doc
+    .font(PDF_FONT.bold)
+    .fontSize(PDF_SIZE.title)
+    .text("COMPROBANTE DE PAGO", 220, 42, {
+      width: 335,
+      align: "right",
+      lineBreak: false,
+    });
 
-  let y = 120;
+  doc.font(PDF_FONT.regular).fontSize(PDF_SIZE.headerMeta);
+
+  doc.text(`Comprobante: ${receiptNumber}`, 340, 72, {
+    width: 215,
+    align: "right",
+  });
+
+  doc.text(`Factura: ${invoiceNumber}`, 340, 88, {
+    width: 215,
+    align: "right",
+  });
+
+  doc.text(`Fecha pago: ${formatDate(payment.paymentDate)}`, 340, 104, {
+    width: 215,
+    align: "right",
+  });
+
+  let y = 145;
 
   y = drawSectionTitle(doc, "Datos del emisor", y);
 
@@ -195,8 +215,8 @@ export async function generatePaymentReceiptPdf(
   y = drawLabelValue(doc, "Pendiente", formatMoney(invoice.amountDue), 40, y);
 
   doc
-    .font("Helvetica")
-    .fontSize(8)
+    .font(PDF_FONT.regular)
+    .fontSize(PDF_SIZE.footer)
     .text("Comprobante generado por BenxCore", 40, 790, {
       align: "center",
       width: 515,
