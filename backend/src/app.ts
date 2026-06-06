@@ -1,0 +1,36 @@
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+
+import { authRouter } from "./modules/auth/auth.routes.js";
+import { companyRouter } from "./modules/company/company.routes.js";
+import { clientsRouter } from "./modules/clients/clients.routes.js";
+import { productsRouter } from "./modules/products/products.routes.js";
+import { invoiceSeriesRouter } from "./modules/invoice-series/invoice-series.routes.js";
+import { invoicesRouter } from "./modules/invoices/invoices.routes.js";
+import { accountingRouter } from "./modules/accounting/accounting.routes.js";
+
+export const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.get("/", (_req, res) => {
+  res.json({
+    message: "BenxCore API is running",
+  });
+});
+
+app.get("/health", (_req, res) => {
+  res.json({
+    status: "ok",
+  });
+});
+
+app.use("/api/auth", authRouter);
+app.use("/api/company", companyRouter);
+app.use("/api/clients", clientsRouter);
+app.use("/api/products", productsRouter);
+app.use("/api/invoice-series", invoiceSeriesRouter);
+app.use("/api/invoices", invoicesRouter);
+app.use("/api/accounting", accountingRouter);
