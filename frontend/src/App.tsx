@@ -1,30 +1,32 @@
 import { useState } from "react";
 import "./App.css";
 import { ClientsPage } from "./pages/ClientsPage";
+import { DashboardPage } from "./pages/DashboardPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { SeriesPage } from "./pages/SeriesPage";
 import type { User } from "./types";
 
-type Page = "clients" | "products" | "series" | "invoices";
+type Page = "dashboard" | "clients" | "products" | "series" | "invoices";
 
 export default function App() {
   const [token, setToken] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [page, setPage] = useState<Page>("clients");
+  const [page, setPage] = useState<Page>("dashboard");
   const [message, setMessage] = useState("");
 
   function handleLogin(nextToken: string, nextUser: User) {
     setToken(nextToken);
     setUser(nextUser);
-    setPage("clients");
+    setPage("dashboard");
     setMessage(`Sesión iniciada como ${nextUser.email}`);
   }
 
   function logout() {
     setToken("");
     setUser(null);
+    setPage("dashboard");
     setMessage("");
   }
 
@@ -50,6 +52,13 @@ export default function App() {
         </div>
 
         <nav className="nav">
+          <button
+            className={page === "dashboard" ? "active" : ""}
+            onClick={() => setPage("dashboard")}
+          >
+            Dashboard
+          </button>
+
           <button
             className={page === "clients" ? "active" : ""}
             onClick={() => setPage("clients")}
@@ -87,11 +96,18 @@ export default function App() {
       </aside>
 
       <section className="content">
+        {page === "dashboard" && (
+          <DashboardPage token={token} notify={setMessage} />
+        )}
+
         {page === "clients" && <ClientsPage token={token} notify={setMessage} />}
+
         {page === "products" && (
           <ProductsPage token={token} notify={setMessage} />
         )}
+
         {page === "series" && <SeriesPage token={token} notify={setMessage} />}
+
         {page === "invoices" && (
           <InvoicesPage token={token} notify={setMessage} />
         )}
