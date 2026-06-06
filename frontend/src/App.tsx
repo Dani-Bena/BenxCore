@@ -94,12 +94,14 @@ export default function App() {
             Facturas
           </button>
 
-          <button
-            className={page === "users" ? "active" : ""}
-            onClick={() => setPage("users")}
-          >
-            Usuarios
-          </button>
+          {user.role === "ADMIN" && (
+            <button
+              className={page === "users" ? "active" : ""}
+              onClick={() => setPage("users")}
+            >
+              Usuarios
+            </button>
+          )}
         </nav>
 
         {message && <div className="message">{message}</div>}
@@ -114,19 +116,29 @@ export default function App() {
           <DashboardPage token={token} notify={setMessage} />
         )}
 
-        {page === "clients" && <ClientsPage token={token} notify={setMessage} />}
+        {page === "clients" && (
+          <ClientsPage token={token} notify={setMessage} />
+        )}
 
         {page === "products" && (
           <ProductsPage token={token} notify={setMessage} />
         )}
 
-        {page === "series" && <SeriesPage token={token} notify={setMessage} />}
+        {page === "series" && (
+          <SeriesPage token={token} notify={setMessage} />
+        )}
 
         {page === "invoices" && (
           <InvoicesPage token={token} notify={setMessage} />
         )}
 
-        {page === "users" && <UsersPage token={token} notify={setMessage} />}
+        {page === "users" && user.role === "ADMIN" && (
+          <UsersPage token={token} notify={setMessage} />
+        )}
+
+        {page === "users" && user.role !== "ADMIN" && (
+          <DashboardPage token={token} notify={setMessage} />
+        )}
       </section>
     </main>
   );
