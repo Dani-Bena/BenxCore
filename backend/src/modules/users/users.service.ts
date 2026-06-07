@@ -101,7 +101,9 @@ async function assertCanRemoveAdminRole(params: {
 
 export async function listUsers(
   context: ServiceContext,
-  query: ListUsersQuery = {}
+  query: ListUsersQuery = {
+    includeInactive: false,
+  }
 ) {
   await assertAdmin(context);
 
