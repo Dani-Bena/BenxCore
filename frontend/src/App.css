@@ -641,10 +641,6 @@ h3 {
   font-size: 20px;
 }
 
-.invoice-detail-card {
-  border: 1px solid var(--color-info-bg);
-}
-
 .invoice-detail-header {
   display: flex;
   justify-content: space-between;
@@ -716,6 +712,10 @@ h3 {
 
   .invoice-detail-actions {
     justify-content: flex-start;
+  }
+
+  .modal-content {
+    padding: 18px;
   }
 }
 /* Layout hard reset */
@@ -795,6 +795,49 @@ td {
 td:nth-child(3),
 td:nth-child(4) {
   white-space: normal;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.modal-content {
+  position: relative;
+  background: var(--color-surface);
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-modal);
+  padding: 28px;
+  width: 100%;
+  max-width: 960px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-surface-soft);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: var(--color-border);
 }
 
 /* Responsive */

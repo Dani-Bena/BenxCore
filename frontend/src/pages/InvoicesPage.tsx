@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest, downloadPdf, formatDate, money } from "../api";
+import { Modal } from "../components/Modal";
 import type {
   Client,
   Invoice,
@@ -509,7 +510,8 @@ export function InvoicesPage({ token, notify }: Props) {
       </article>
 
       {selectedInvoice && (
-        <article className="card invoice-detail-card">
+        <Modal onClose={() => setSelectedInvoice(null)}>
+        <article className="invoice-detail-card">
           <div className="invoice-detail-header">
             <div>
               <span className={`status ${selectedInvoice.status}`}>
@@ -698,6 +700,7 @@ export function InvoicesPage({ token, notify }: Props) {
             </table>
           </section>
         </article>
+        </Modal>
       )}
     </section>
   );
