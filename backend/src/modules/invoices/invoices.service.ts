@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/errors.js";
 import {
   createInvoiceIssuedJournalEntry,
   createInvoicePaymentJournalEntry,
@@ -40,14 +41,7 @@ type TaxSummary = {
   taxAmount: string;
 };
 
-export class InvoiceServiceError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number
-  ) {
-    super(message);
-  }
-}
+export class InvoiceServiceError extends AppError {}
 
 function toAuditJson(value: unknown) {
   return JSON.parse(JSON.stringify(value));
@@ -698,13 +692,11 @@ export async function issueInvoice(
         payments: true,
       },
     });
-    
-    
+
     await createInvoiceIssuedJournalEntry(tx, {
-  companyId,
-  invoice: issuedInvoice,
-});
-    
+      companyId,
+      invoice: issuedInvoice,
+    });
 
     await tx.auditLog.create({
       data: {
@@ -720,8 +712,8 @@ export async function issueInvoice(
 
     return issuedInvoice;
   });
-  
 }
+
 function toNumber(value: unknown): number {
   return Number(value);
 }
@@ -832,7 +824,6 @@ export async function registerInvoicePayment(
         invoiceId,
       },
     });
-    
 
     const updatedInvoice = await tx.invoice.update({
       where: {
@@ -859,13 +850,14 @@ export async function registerInvoicePayment(
         },
       },
     });
+
     await createInvoicePaymentJournalEntry(tx, {
-  companyId,
-  invoiceId,
-  paymentId: payment.id,
-  amount: payment.amount,
-  invoiceNumber: updatedInvoice.invoiceNumber,
-});
+      companyId,
+      invoiceId,
+      paymentId: payment.id,
+      amount: payment.amount,
+      invoiceNumber: updatedInvoice.invoiceNumber,
+    });
 
     await tx.auditLog.create({
       data: {
@@ -888,4 +880,3 @@ export async function registerInvoicePayment(
     };
   });
 }
- 

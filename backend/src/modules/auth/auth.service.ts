@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/errors.js";
 import type { LoginInput, RegisterInput } from "./auth.schemas.js";
 
 type AuthTokenPayload = {
@@ -18,14 +19,7 @@ type SanitizedUserInput = {
   companyId: number;
 };
 
-export class AuthServiceError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number
-  ) {
-    super(message);
-  }
-}
+export class AuthServiceError extends AppError {}
 
 function createToken(payload: AuthTokenPayload): string {
   const jwtSecret = process.env.JWT_SECRET;

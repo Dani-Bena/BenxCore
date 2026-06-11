@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/errors.js";
 import type {
   CreateClientInput,
   UpdateClientInput,
@@ -13,14 +14,7 @@ type ClientIdInput = {
   clientId: number;
 };
 
-export class ClientServiceError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number
-  ) {
-    super(message);
-  }
-}
+export class ClientServiceError extends AppError {}
 
 function toAuditJson(value: unknown) {
   return JSON.parse(JSON.stringify(value));

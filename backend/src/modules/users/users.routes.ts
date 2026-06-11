@@ -1,15 +1,15 @@
-import { Router, type Response } from "express";
+import { Router } from "express";
 import {
   authMiddleware,
   type AuthenticatedRequest,
 } from "../../middleware/auth.middleware.js";
+import { getAuthContext, parseId } from "../../utils/http.js";
 import {
   createUserSchema,
   listUsersQuerySchema,
   updateUserSchema,
 } from "./users.schemas.js";
 import {
-  UsersServiceError,
   createUser,
   deactivateUser,
   getUserById,
@@ -20,46 +20,6 @@ import {
 export const usersRouter = Router();
 
 usersRouter.use(authMiddleware);
-
-function parseId(id: string | undefined): number | null {
-  if (!id) return null;
-
-  const parsedId = Number(id);
-
-  if (!Number.isInteger(parsedId) || parsedId <= 0) {
-    return null;
-  }
-
-  return parsedId;
-}
-
-function getAuthContext(req: AuthenticatedRequest) {
-  const auth = req.auth;
-
-  if (!auth?.companyId || !auth.userId) {
-    return null;
-  }
-
-  return {
-    companyId: auth.companyId,
-    userId: auth.userId,
-  };
-}
-
-function handleUsersError(error: unknown, res: Response) {
-  if (error instanceof UsersServiceError) {
-    res.status(error.statusCode).json({
-      message: error.message,
-    });
-    return;
-  }
-
-  console.error(error);
-
-  res.status(500).json({
-    message: "Internal server error",
-  });
-}
 
 usersRouter.get("/", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
@@ -82,15 +42,11 @@ usersRouter.get("/", async (req, res) => {
     return;
   }
 
-  try {
-    const users = await listUsers(context, result.data);
+  const users = await listUsers(context, result.data);
 
-    res.json({
-      users,
-    });
-  } catch (error) {
-    handleUsersError(error, res);
-  }
+  res.json({
+    users,
+  });
 });
 
 usersRouter.get("/:id", async (req, res) => {
@@ -112,15 +68,11 @@ usersRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const user = await getUserById(context, { userId });
+  const user = await getUserById(context, { userId });
 
-    res.json({
-      user,
-    });
-  } catch (error) {
-    handleUsersError(error, res);
-  }
+  res.json({
+    user,
+  });
 });
 
 usersRouter.post("/", async (req, res) => {
@@ -144,15 +96,11 @@ usersRouter.post("/", async (req, res) => {
     return;
   }
 
-  try {
-    const user = await createUser(context, result.data);
+  const user = await createUser(context, result.data);
 
-    res.status(201).json({
-      user,
-    });
-  } catch (error) {
-    handleUsersError(error, res);
-  }
+  res.status(201).json({
+    user,
+  });
 });
 
 usersRouter.put("/:id", async (req, res) => {
@@ -184,15 +132,11 @@ usersRouter.put("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const user = await updateUser(context, { userId }, result.data);
+  const user = await updateUser(context, { userId }, result.data);
 
-    res.json({
-      user,
-    });
-  } catch (error) {
-    handleUsersError(error, res);
-  }
+  res.json({
+    user,
+  });
 });
 
 usersRouter.delete("/:id", async (req, res) => {
@@ -214,14 +158,10 @@ usersRouter.delete("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const user = await deactivateUser(context, { userId });
+  const user = await deactivateUser(context, { userId });
 
-    res.json({
-      message: "User deactivated successfully",
-      user,
-    });
-  } catch (error) {
-    handleUsersError(error, res);
-  }
+  res.json({
+    message: "User deactivated successfully",
+    user,
+  });
 });

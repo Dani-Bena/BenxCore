@@ -1,32 +1,12 @@
-import { Router, type Response } from "express";
+import { Router } from "express";
 import {
   authMiddleware,
   type AuthenticatedRequest,
 } from "../../middleware/auth.middleware.js";
 import { loginSchema, registerSchema } from "./auth.schemas.js";
-import {
-  AuthServiceError,
-  getCurrentUser,
-  loginUser,
-  registerUser,
-} from "./auth.service.js";
+import { getCurrentUser, loginUser, registerUser } from "./auth.service.js";
 
 export const authRouter = Router();
-
-function handleAuthError(error: unknown, res: Response) {
-  if (error instanceof AuthServiceError) {
-    res.status(error.statusCode).json({
-      message: error.message,
-    });
-    return;
-  }
-
-  console.error(error);
-
-  res.status(500).json({
-    message: "Internal server error",
-  });
-}
 
 authRouter.post("/register", async (req, res) => {
   const result = registerSchema.safeParse(req.body);
@@ -39,13 +19,9 @@ authRouter.post("/register", async (req, res) => {
     return;
   }
 
-  try {
-    const authResult = await registerUser(result.data);
+  const authResult = await registerUser(result.data);
 
-    res.status(201).json(authResult);
-  } catch (error) {
-    handleAuthError(error, res);
-  }
+  res.status(201).json(authResult);
 });
 
 authRouter.post("/login", async (req, res) => {
@@ -59,13 +35,9 @@ authRouter.post("/login", async (req, res) => {
     return;
   }
 
-  try {
-    const authResult = await loginUser(result.data);
+  const authResult = await loginUser(result.data);
 
-    res.json(authResult);
-  } catch (error) {
-    handleAuthError(error, res);
-  }
+  res.json(authResult);
 });
 
 authRouter.get("/me", authMiddleware, async (req, res) => {
@@ -78,13 +50,9 @@ authRouter.get("/me", authMiddleware, async (req, res) => {
     return;
   }
 
-  try {
-    const user = await getCurrentUser(authReq.auth.userId);
+  const user = await getCurrentUser(authReq.auth.userId);
 
-    res.json({
-      user,
-    });
-  } catch (error) {
-    handleAuthError(error, res);
-  }
+  res.json({
+    user,
+  });
 });

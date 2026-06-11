@@ -1,4 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/errors.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 
 const DEFAULT_ACCOUNTS = [
   {
@@ -28,7 +30,7 @@ const DEFAULT_ACCOUNTS = [
   },
 ] as const;
 
-type AccountingTx = any;
+type AccountingTx = Prisma.TransactionClient;
 
 type ServiceContext = {
   companyId: number;
@@ -64,14 +66,7 @@ type InvoiceForIssueAccounting = {
   lines: InvoiceLineForAccounting[];
 };
 
-export class AccountingServiceError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number
-  ) {
-    super(message);
-  }
-}
+export class AccountingServiceError extends AppError {}
 
 function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;

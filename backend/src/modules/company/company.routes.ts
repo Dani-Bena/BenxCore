@@ -4,6 +4,7 @@ import {
   authMiddleware,
   type AuthenticatedRequest,
 } from "../../middleware/auth.middleware.js";
+import { getAuthContext } from "../../utils/http.js";
 import { updateCompanySchema } from "./company.schemas.js";
 
 export const companyRouter = Router();
@@ -12,9 +13,9 @@ companyRouter.use(authMiddleware);
 
 companyRouter.get("/", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
-  const companyId = authReq.auth?.companyId;
+  const context = getAuthContext(authReq);
 
-  if (!companyId) {
+  if (!context) {
     res.status(401).json({
       message: "User has no company assigned",
     });
@@ -23,7 +24,7 @@ companyRouter.get("/", async (req, res) => {
 
   const company = await prisma.company.findUnique({
     where: {
-      id: companyId,
+      id: context.companyId,
     },
   });
 
@@ -41,9 +42,9 @@ companyRouter.get("/", async (req, res) => {
 
 companyRouter.put("/", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
-  const companyId = authReq.auth?.companyId;
+  const context = getAuthContext(authReq);
 
-  if (!companyId) {
+  if (!context) {
     res.status(401).json({
       message: "User has no company assigned",
     });
@@ -62,7 +63,7 @@ companyRouter.put("/", async (req, res) => {
 
   const updatedCompany = await prisma.company.update({
     where: {
-      id: companyId,
+      id: context.companyId,
     },
     data: result.data,
   });

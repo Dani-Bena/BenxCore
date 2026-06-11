@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/errors.js";
 import type {
   CreateProductInput,
   UpdateProductInput,
@@ -13,14 +14,7 @@ type ProductIdInput = {
   productId: number;
 };
 
-export class ProductServiceError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number
-  ) {
-    super(message);
-  }
-}
+export class ProductServiceError extends AppError {}
 
 function toAuditJson(value: unknown) {
   return JSON.parse(JSON.stringify(value));

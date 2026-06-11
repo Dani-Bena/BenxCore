@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/errors.js";
 import type {
   CreateUserInput,
   ListUsersQuery,
@@ -15,14 +16,7 @@ type UserIdInput = {
   userId: number;
 };
 
-export class UsersServiceError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number
-  ) {
-    super(message);
-  }
-}
+export class UsersServiceError extends AppError {}
 
 function sanitizeUser(user: {
   id: number;

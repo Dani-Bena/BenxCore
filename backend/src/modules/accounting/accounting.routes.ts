@@ -1,14 +1,14 @@
-import { Router, type Response } from "express";
+import { Router } from "express";
 import {
   authMiddleware,
   type AuthenticatedRequest,
 } from "../../middleware/auth.middleware.js";
+import { getAuthContext, parseId } from "../../utils/http.js";
 import {
   listAccountsQuerySchema,
   listJournalEntriesQuerySchema,
 } from "./accounting.schemas.js";
 import {
-  AccountingServiceError,
   getJournalEntryById,
   listAccountingAccounts,
   listJournalEntries,
@@ -17,54 +17,6 @@ import {
 export const accountingRouter = Router();
 
 accountingRouter.use(authMiddleware);
-
-function getCompanyId(req: AuthenticatedRequest): number | null {
-  return req.auth?.companyId ?? null;
-}
-
-function getUserId(req: AuthenticatedRequest): number | null {
-  return req.auth?.userId ?? null;
-}
-
-function parseId(id: string | undefined): number | null {
-  if (!id) return null;
-
-  const parsedId = Number(id);
-
-  if (!Number.isInteger(parsedId) || parsedId <= 0) {
-    return null;
-  }
-
-  return parsedId;
-}
-
-function getAuthContext(req: AuthenticatedRequest) {
-  const companyId = getCompanyId(req);
-
-  if (!companyId) {
-    return null;
-  }
-
-  return {
-    companyId,
-    userId: getUserId(req),
-  };
-}
-
-function handleAccountingError(error: unknown, res: Response) {
-  if (error instanceof AccountingServiceError) {
-    res.status(error.statusCode).json({
-      message: error.message,
-    });
-    return;
-  }
-
-  console.error(error);
-
-  res.status(500).json({
-    message: "Internal server error",
-  });
-}
 
 accountingRouter.get("/accounts", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
@@ -87,15 +39,11 @@ accountingRouter.get("/accounts", async (req, res) => {
     return;
   }
 
-  try {
-    const accounts = await listAccountingAccounts(context, result.data);
+  const accounts = await listAccountingAccounts(context, result.data);
 
-    res.json({
-      accounts,
-    });
-  } catch (error) {
-    handleAccountingError(error, res);
-  }
+  res.json({
+    accounts,
+  });
 });
 
 accountingRouter.get("/journal-entries", async (req, res) => {
@@ -119,15 +67,11 @@ accountingRouter.get("/journal-entries", async (req, res) => {
     return;
   }
 
-  try {
-    const journalEntries = await listJournalEntries(context, result.data);
+  const journalEntries = await listJournalEntries(context, result.data);
 
-    res.json({
-      journalEntries,
-    });
-  } catch (error) {
-    handleAccountingError(error, res);
-  }
+  res.json({
+    journalEntries,
+  });
 });
 
 accountingRouter.get("/journal-entries/:id", async (req, res) => {
@@ -149,15 +93,11 @@ accountingRouter.get("/journal-entries/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const journalEntry = await getJournalEntryById(context, {
-      journalEntryId,
-    });
+  const journalEntry = await getJournalEntryById(context, {
+    journalEntryId,
+  });
 
-    res.json({
-      journalEntry,
-    });
-  } catch (error) {
-    handleAccountingError(error, res);
-  }
+  res.json({
+    journalEntry,
+  });
 });

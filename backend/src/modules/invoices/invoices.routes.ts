@@ -1,8 +1,9 @@
-import { Router, type Response } from "express";
+import { Router } from "express";
 import {
   authMiddleware,
   type AuthenticatedRequest,
 } from "../../middleware/auth.middleware.js";
+import { getAuthContext, parseId } from "../../utils/http.js";
 import {
   createInvoiceSchema,
   registerPaymentSchema,
@@ -11,7 +12,6 @@ import {
 import { generateInvoicePdf } from "./invoice-pdf.service.js";
 import { generatePaymentReceiptPdf } from "./payment-receipt-pdf.service.js";
 import {
-  InvoiceServiceError,
   cancelDraftInvoice,
   createDraftInvoice,
   getInvoiceById,
@@ -25,54 +25,6 @@ import {
 export const invoicesRouter = Router();
 
 invoicesRouter.use(authMiddleware);
-
-function getCompanyId(req: AuthenticatedRequest): number | null {
-  return req.auth?.companyId ?? null;
-}
-
-function getUserId(req: AuthenticatedRequest): number | null {
-  return req.auth?.userId ?? null;
-}
-
-function parseId(id: string | undefined): number | null {
-  if (!id) return null;
-
-  const parsedId = Number(id);
-
-  if (!Number.isInteger(parsedId) || parsedId <= 0) {
-    return null;
-  }
-
-  return parsedId;
-}
-
-function getAuthContext(req: AuthenticatedRequest) {
-  const companyId = getCompanyId(req);
-
-  if (!companyId) {
-    return null;
-  }
-
-  return {
-    companyId,
-    userId: getUserId(req),
-  };
-}
-
-function handleInvoiceError(error: unknown, res: Response) {
-  if (error instanceof InvoiceServiceError) {
-    res.status(error.statusCode).json({
-      message: error.message,
-    });
-    return;
-  }
-
-  console.error(error);
-
-  res.status(500).json({
-    message: "Internal server error",
-  });
-}
 
 /**
  * GET /api/invoices
@@ -89,15 +41,11 @@ invoicesRouter.get("/", async (req, res) => {
     return;
   }
 
-  try {
-    const invoices = await listInvoices(context);
+  const invoices = await listInvoices(context);
 
-    res.json({
-      invoices,
-    });
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.json({
+    invoices,
+  });
 });
 
 /**
@@ -123,19 +71,15 @@ invoicesRouter.get("/:id/pdf", async (req, res) => {
     return;
   }
 
-  try {
-    const pdf = await generateInvoicePdf(context, { invoiceId });
+  const pdf = await generateInvoicePdf(context, { invoiceId });
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${pdf.filename}"`
-    );
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `inline; filename="${pdf.filename}"`
+  );
 
-    res.send(pdf.buffer);
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.send(pdf.buffer);
 });
 
 /**
@@ -169,22 +113,18 @@ invoicesRouter.get("/:id/payments/:paymentId/receipt", async (req, res) => {
     return;
   }
 
-  try {
-    const pdf = await generatePaymentReceiptPdf(context, {
-      invoiceId,
-      paymentId,
-    });
+  const pdf = await generatePaymentReceiptPdf(context, {
+    invoiceId,
+    paymentId,
+  });
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${pdf.filename}"`
-    );
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `inline; filename="${pdf.filename}"`
+  );
 
-    res.send(pdf.buffer);
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.send(pdf.buffer);
 });
 
 /**
@@ -210,15 +150,11 @@ invoicesRouter.get("/:id/payments", async (req, res) => {
     return;
   }
 
-  try {
-    const payments = await listInvoicePayments(context, { invoiceId });
+  const payments = await listInvoicePayments(context, { invoiceId });
 
-    res.json({
-      payments,
-    });
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.json({
+    payments,
+  });
 });
 
 /**
@@ -244,15 +180,11 @@ invoicesRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const invoice = await getInvoiceById(context, { invoiceId });
+  const invoice = await getInvoiceById(context, { invoiceId });
 
-    res.json({
-      invoice,
-    });
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.json({
+    invoice,
+  });
 });
 
 /**
@@ -280,15 +212,11 @@ invoicesRouter.post("/", async (req, res) => {
     return;
   }
 
-  try {
-    const invoice = await createDraftInvoice(context, result.data);
+  const invoice = await createDraftInvoice(context, result.data);
 
-    res.status(201).json({
-      invoice,
-    });
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.status(201).json({
+    invoice,
+  });
 });
 
 /**
@@ -314,15 +242,11 @@ invoicesRouter.post("/:id/issue", async (req, res) => {
     return;
   }
 
-  try {
-    const invoice = await issueInvoice(context, { invoiceId });
+  const invoice = await issueInvoice(context, { invoiceId });
 
-    res.json({
-      invoice,
-    });
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.json({
+    invoice,
+  });
 });
 
 /**
@@ -358,17 +282,13 @@ invoicesRouter.post("/:id/payments", async (req, res) => {
     return;
   }
 
-  try {
-    const paymentResult = await registerInvoicePayment(
-      context,
-      { invoiceId },
-      result.data
-    );
+  const paymentResult = await registerInvoicePayment(
+    context,
+    { invoiceId },
+    result.data
+  );
 
-    res.status(201).json(paymentResult);
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.status(201).json(paymentResult);
 });
 
 /**
@@ -404,19 +324,15 @@ invoicesRouter.put("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const invoice = await updateDraftInvoice(
-      context,
-      { invoiceId },
-      result.data
-    );
+  const invoice = await updateDraftInvoice(
+    context,
+    { invoiceId },
+    result.data
+  );
 
-    res.json({
-      invoice,
-    });
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.json({
+    invoice,
+  });
 });
 
 /**
@@ -442,14 +358,10 @@ invoicesRouter.delete("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const invoice = await cancelDraftInvoice(context, { invoiceId });
+  const invoice = await cancelDraftInvoice(context, { invoiceId });
 
-    res.json({
-      message: "Draft invoice cancelled successfully",
-      invoice,
-    });
-  } catch (error) {
-    handleInvoiceError(error, res);
-  }
+  res.json({
+    message: "Draft invoice cancelled successfully",
+    invoice,
+  });
 });

@@ -3,9 +3,9 @@ import {
   authMiddleware,
   type AuthenticatedRequest,
 } from "../../middleware/auth.middleware.js";
+import { getAuthContext, parseId } from "../../utils/http.js";
 import { createProductSchema, updateProductSchema } from "./products.schemas.js";
 import {
-  ProductServiceError,
   createProduct,
   deactivateProduct,
   getProductById,
@@ -17,60 +17,12 @@ export const productsRouter = Router();
 
 productsRouter.use(authMiddleware);
 
-function getCompanyId(req: AuthenticatedRequest): number | null {
-  return req.auth?.companyId ?? null;
-}
-
-function getUserId(req: AuthenticatedRequest): number | null {
-  return req.auth?.userId ?? null;
-}
-
-function parseId(id: string | undefined): number | null {
-  if (!id) return null;
-
-  const parsedId = Number(id);
-
-  if (!Number.isInteger(parsedId) || parsedId <= 0) {
-    return null;
-  }
-
-  return parsedId;
-}
-
-function getAuthContext(req: AuthenticatedRequest) {
-  const companyId = getCompanyId(req);
-
-  if (!companyId) {
-    return null;
-  }
-
-  return {
-    companyId,
-    userId: getUserId(req),
-  };
-}
-
 function parseProductType(type: unknown): "PRODUCT" | "SERVICE" | undefined {
   if (type === "PRODUCT" || type === "SERVICE") {
     return type;
   }
 
   return undefined;
-}
-
-function handleServiceError(error: unknown, res: any) {
-  if (error instanceof ProductServiceError) {
-    res.status(error.statusCode).json({
-      message: error.message,
-    });
-    return;
-  }
-
-  console.error(error);
-
-  res.status(500).json({
-    message: "Internal server error",
-  });
 }
 
 productsRouter.get("/", async (req, res) => {
@@ -84,21 +36,17 @@ productsRouter.get("/", async (req, res) => {
     return;
   }
 
-  try {
-    const includeInactive = req.query.includeInactive === "true";
-    const type = parseProductType(req.query.type);
+  const includeInactive = req.query.includeInactive === "true";
+  const type = parseProductType(req.query.type);
 
-    const products = await listProducts(context, {
-      includeInactive,
-      type,
-    });
+  const products = await listProducts(context, {
+    includeInactive,
+    type,
+  });
 
-    res.json({
-      products,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.json({
+    products,
+  });
 });
 
 productsRouter.get("/:id", async (req, res) => {
@@ -120,15 +68,11 @@ productsRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const product = await getProductById(context, { productId });
+  const product = await getProductById(context, { productId });
 
-    res.json({
-      product,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.json({
+    product,
+  });
 });
 
 productsRouter.post("/", async (req, res) => {
@@ -152,15 +96,11 @@ productsRouter.post("/", async (req, res) => {
     return;
   }
 
-  try {
-    const product = await createProduct(context, result.data);
+  const product = await createProduct(context, result.data);
 
-    res.status(201).json({
-      product,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.status(201).json({
+    product,
+  });
 });
 
 productsRouter.put("/:id", async (req, res) => {
@@ -192,15 +132,11 @@ productsRouter.put("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const product = await updateProduct(context, { productId }, result.data);
+  const product = await updateProduct(context, { productId }, result.data);
 
-    res.json({
-      product,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.json({
+    product,
+  });
 });
 
 productsRouter.delete("/:id", async (req, res) => {
@@ -222,14 +158,10 @@ productsRouter.delete("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const product = await deactivateProduct(context, { productId });
+  const product = await deactivateProduct(context, { productId });
 
-    res.json({
-      message: "Product deactivated successfully",
-      product,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.json({
+    message: "Product deactivated successfully",
+    product,
+  });
 });

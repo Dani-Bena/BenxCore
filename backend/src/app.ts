@@ -10,6 +10,7 @@ import { invoiceSeriesRouter } from "./modules/invoice-series/invoice-series.rou
 import { invoicesRouter } from "./modules/invoices/invoices.routes.js";
 import { accountingRouter } from "./modules/accounting/accounting.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";
+import { errorHandler } from "./middleware/error.middleware.js";
 
 export const app = express();
 
@@ -36,3 +37,5 @@ app.use("/api/invoice-series", invoiceSeriesRouter);
 app.use("/api/invoices", invoicesRouter);
 app.use("/api/accounting", accountingRouter);
 app.use("/api/users", usersRouter);
+
+app.use(errorHandler);

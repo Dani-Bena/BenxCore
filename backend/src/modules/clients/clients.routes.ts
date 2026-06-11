@@ -3,9 +3,9 @@ import {
   authMiddleware,
   type AuthenticatedRequest,
 } from "../../middleware/auth.middleware.js";
+import { getAuthContext, parseId } from "../../utils/http.js";
 import { createClientSchema, updateClientSchema } from "./clients.schemas.js";
 import {
-  ClientServiceError,
   createClient,
   deactivateClient,
   getClientById,
@@ -16,54 +16,6 @@ import {
 export const clientsRouter = Router();
 
 clientsRouter.use(authMiddleware);
-
-function getCompanyId(req: AuthenticatedRequest): number | null {
-  return req.auth?.companyId ?? null;
-}
-
-function getUserId(req: AuthenticatedRequest): number | null {
-  return req.auth?.userId ?? null;
-}
-
-function parseId(id: string | undefined): number | null {
-  if (!id) return null;
-
-  const parsedId = Number(id);
-
-  if (!Number.isInteger(parsedId) || parsedId <= 0) {
-    return null;
-  }
-
-  return parsedId;
-}
-
-function getAuthContext(req: AuthenticatedRequest) {
-  const companyId = getCompanyId(req);
-
-  if (!companyId) {
-    return null;
-  }
-
-  return {
-    companyId,
-    userId: getUserId(req),
-  };
-}
-
-function handleServiceError(error: unknown, res: any) {
-  if (error instanceof ClientServiceError) {
-    res.status(error.statusCode).json({
-      message: error.message,
-    });
-    return;
-  }
-
-  console.error(error);
-
-  res.status(500).json({
-    message: "Internal server error",
-  });
-}
 
 clientsRouter.get("/", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
@@ -76,16 +28,12 @@ clientsRouter.get("/", async (req, res) => {
     return;
   }
 
-  try {
-    const includeInactive = req.query.includeInactive === "true";
-    const clients = await listClients(context, { includeInactive });
+  const includeInactive = req.query.includeInactive === "true";
+  const clients = await listClients(context, { includeInactive });
 
-    res.json({
-      clients,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.json({
+    clients,
+  });
 });
 
 clientsRouter.get("/:id", async (req, res) => {
@@ -107,15 +55,11 @@ clientsRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const client = await getClientById(context, { clientId });
+  const client = await getClientById(context, { clientId });
 
-    res.json({
-      client,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.json({
+    client,
+  });
 });
 
 clientsRouter.post("/", async (req, res) => {
@@ -139,15 +83,11 @@ clientsRouter.post("/", async (req, res) => {
     return;
   }
 
-  try {
-    const client = await createClient(context, result.data);
+  const client = await createClient(context, result.data);
 
-    res.status(201).json({
-      client,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.status(201).json({
+    client,
+  });
 });
 
 clientsRouter.put("/:id", async (req, res) => {
@@ -179,15 +119,11 @@ clientsRouter.put("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const client = await updateClient(context, { clientId }, result.data);
+  const client = await updateClient(context, { clientId }, result.data);
 
-    res.json({
-      client,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.json({
+    client,
+  });
 });
 
 clientsRouter.delete("/:id", async (req, res) => {
@@ -209,14 +145,10 @@ clientsRouter.delete("/:id", async (req, res) => {
     return;
   }
 
-  try {
-    const client = await deactivateClient(context, { clientId });
+  const client = await deactivateClient(context, { clientId });
 
-    res.json({
-      message: "Client deactivated successfully",
-      client,
-    });
-  } catch (error) {
-    handleServiceError(error, res);
-  }
+  res.json({
+    message: "Client deactivated successfully",
+    client,
+  });
 });

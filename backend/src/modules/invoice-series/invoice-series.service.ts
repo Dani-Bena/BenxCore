@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/errors.js";
 import type {
   CreateInvoiceSeriesInput,
   UpdateInvoiceSeriesInput,
@@ -13,14 +14,7 @@ type InvoiceSeriesIdInput = {
   invoiceSeriesId: number;
 };
 
-export class InvoiceSeriesServiceError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number
-  ) {
-    super(message);
-  }
-}
+export class InvoiceSeriesServiceError extends AppError {}
 
 function toAuditJson(value: unknown) {
   return JSON.parse(JSON.stringify(value));
