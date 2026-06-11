@@ -5,8 +5,8 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--color-bg);
+  color: var(--color-ink);
 }
 
 button,
@@ -17,11 +17,17 @@ select {
 
 button {
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 9px 12px;
-  background: #111827;
-  color: white;
+  background: var(--color-ink);
+  color: var(--color-surface);
   cursor: pointer;
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    transform var(--transition-fast);
 }
 
 button:disabled {
@@ -30,15 +36,35 @@ button:disabled {
 }
 
 button:hover:not(:disabled) {
-  background: #1f2937;
+  background: var(--color-ink-soft);
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--color-primary-soft);
+  outline-offset: 2px;
 }
 
 input,
 select {
   width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
   padding: 9px 10px;
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-ring);
 }
 
 .login-page {
@@ -46,9 +72,9 @@ select {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
   background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.35), transparent 32%),
-    linear-gradient(135deg, #0f172a 0%, #111827 45%, #1e293b 100%);
-  color: white;
+    radial-gradient(circle at top left, var(--color-primary-soft), transparent 32%),
+    linear-gradient(135deg, #0f172a 0%, var(--color-ink) 45%, #1e293b 100%);
+  color: var(--color-surface);
 }
 
 .login-left {
@@ -67,14 +93,14 @@ select {
 .login-logo {
   width: 52px;
   height: 52px;
-  border-radius: 16px;
+  border-radius: var(--radius-2xl);
   display: grid;
   place-items: center;
-  background: #2563eb;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-surface);
   font-size: 26px;
   font-weight: 900;
-  box-shadow: 0 18px 35px rgba(37, 99, 235, 0.35);
+  box-shadow: var(--shadow-pop);
 }
 
 .login-brand h1 {
@@ -84,7 +110,7 @@ select {
 
 .login-brand p {
   margin: 3px 0 0;
-  color: #cbd5e1;
+  color: var(--color-dark-text);
 }
 
 .login-hero {
@@ -100,7 +126,7 @@ select {
 
 .login-hero p {
   margin-top: 18px;
-  color: #cbd5e1;
+  color: var(--color-dark-text);
   font-size: 18px;
   line-height: 1.6;
 }
@@ -115,8 +141,8 @@ select {
   border: 1px solid rgba(203, 213, 225, 0.25);
   background: rgba(15, 23, 42, 0.45);
   padding: 10px 14px;
-  border-radius: 999px;
-  color: #e5e7eb;
+  border-radius: var(--radius-pill);
+  color: var(--color-dark-text-soft);
   font-size: 14px;
 }
 
@@ -129,11 +155,11 @@ select {
 .login-card {
   width: 100%;
   max-width: 430px;
-  background: white;
-  color: #111827;
-  border-radius: 24px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-radius: var(--radius-3xl);
   padding: 34px;
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-modal);
 }
 
 .login-card-header h2 {
@@ -144,7 +170,7 @@ select {
 
 .login-card-header p {
   margin: 8px 0 0;
-  color: #6b7280;
+  color: var(--color-muted);
 }
 
 .login-form {
@@ -158,56 +184,51 @@ select {
   gap: 7px;
   font-weight: 700;
   font-size: 14px;
-  color: #374151;
+  color: var(--color-slate);
 }
 
 .login-form input {
-  background: #f9fafb;
-  border: 1px solid #d1d5db;
-  color: #111827;
-  border-radius: 12px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-ink);
+  border-radius: var(--radius-lg);
   padding: 12px 13px;
-}
-
-.login-form input:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.35);
-  border-color: #2563eb;
 }
 
 .login-form button {
   margin-top: 8px;
   width: 100%;
   padding: 12px 14px;
-  border-radius: 12px;
-  background: #2563eb;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
   font-weight: 800;
 }
 
 .login-form button:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--color-primary-hover);
 }
 
 .login-error {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 14px;
 }
 
 .login-demo {
   margin-top: 22px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
   padding-top: 16px;
   display: grid;
   gap: 4px;
-  color: #6b7280;
+  color: var(--color-muted);
   font-size: 13px;
 }
 
 .login-demo strong {
-  color: #111827;
+  color: var(--color-ink);
 }
 
 .app-layout {
@@ -217,8 +238,8 @@ select {
 }
 
 .sidebar {
-  background: #111827;
-  color: white;
+  background: var(--color-ink);
+  color: var(--color-surface);
   padding: 24px;
 }
 
@@ -231,11 +252,11 @@ select {
 .brand-logo {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
-  background: #2563eb;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
   display: grid;
   place-items: center;
-  color: white;
+  color: var(--color-surface);
   font-weight: 900;
   font-size: 22px;
 }
@@ -247,20 +268,20 @@ select {
 
 .brand p {
   margin: 3px 0 0;
-  color: #d1d5db;
+  color: var(--color-dark-muted);
 }
 
 .user-box {
   margin-top: 24px;
   padding: 14px;
-  background: #1f2937;
-  border-radius: 10px;
+  background: var(--color-ink-soft);
+  border-radius: var(--radius-md);
   display: grid;
   gap: 4px;
 }
 
 .user-box span {
-  color: #d1d5db;
+  color: var(--color-dark-muted);
   font-size: 13px;
 }
 
@@ -273,34 +294,34 @@ select {
 .nav button {
   text-align: left;
   background: transparent;
-  border: 1px solid #374151;
-  color: #d1d5db;
+  border: 1px solid var(--color-dark-border);
+  color: var(--color-dark-muted);
 }
 
 .nav button.active,
 .nav button:hover {
-  background: #1f2937;
-  color: white;
-  border-color: #2563eb;
+  background: var(--color-ink-soft);
+  color: var(--color-surface);
+  border-color: var(--color-primary);
 }
 
 .message {
   margin-top: 18px;
   padding: 12px;
-  border-radius: 8px;
-  background: #1f2937;
-  color: #e5e7eb;
+  border-radius: var(--radius-sm);
+  background: var(--color-ink-soft);
+  color: var(--color-dark-text-soft);
   font-size: 14px;
 }
 
 .logout-button {
   margin-top: 18px;
   width: 100%;
-  background: #991b1b;
+  background: var(--color-danger);
 }
 
 .logout-button:hover {
-  background: #7f1d1d;
+  background: var(--color-danger-hover);
 }
 
 .content {
@@ -319,10 +340,10 @@ select {
 }
 
 .card {
-  background: white;
-  border-radius: 14px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
   padding: 22px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-card);
 }
 
 .card h2 {
@@ -330,7 +351,7 @@ select {
 }
 
 .muted {
-  color: #6b7280;
+  color: var(--color-muted);
   margin-top: 5px;
 }
 
@@ -382,60 +403,67 @@ table {
 th,
 td {
   padding: 10px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   text-align: left;
 }
 
 th {
-  background: #f9fafb;
-  color: #374151;
+  background: var(--color-surface-soft);
+  color: var(--color-slate);
+}
+
+tbody tr {
+  transition: background-color var(--transition-fast);
 }
 
 tbody tr:hover {
-  background: #f9fafb;
+  background: var(--color-surface-soft);
 }
 
 .empty {
   text-align: center;
-  color: #6b7280;
-  padding: 20px;
+  color: var(--color-muted);
+  padding: 36px 20px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-soft);
 }
 
 .status {
   display: inline-block;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 4px 9px;
   font-size: 12px;
   font-weight: 700;
 }
 
 .status.DRAFT {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-bg);
+  color: var(--color-slate);
 }
 
 .status.ISSUED {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--color-info-bg);
+  color: var(--color-info);
 }
 
 .status.PARTIALLY_PAID {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }
 
 .status.PAID {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 .status.OVERDUE {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
 }
 
 .status.CANCELLED {
-  background: #e5e7eb;
+  background: var(--color-border);
   color: #4b5563;
 }
 
@@ -447,15 +475,15 @@ tbody tr:hover {
 }
 
 .summary-grid div {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 12px;
 }
 
 .summary-grid span {
   display: block;
-  color: #6b7280;
+  color: var(--color-muted);
   font-size: 13px;
   margin-bottom: 5px;
 }
@@ -468,12 +496,12 @@ tbody tr:hover {
 }
 
 .ok {
-  color: #166534;
+  color: var(--color-success);
   font-weight: 900;
 }
 
 .bad {
-  color: #991b1b;
+  color: var(--color-danger);
   font-weight: 900;
 }
 
@@ -485,15 +513,15 @@ tbody tr:hover {
 }
 
 .dashboard-card {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: 16px;
 }
 
 .dashboard-card span {
   display: block;
-  color: #6b7280;
+  color: var(--color-muted);
   font-size: 13px;
   margin-bottom: 8px;
 }
@@ -503,13 +531,30 @@ tbody tr:hover {
 }
 
 .dashboard-card.warning {
-  background: #fffbeb;
-  border-color: #fde68a;
+  background: var(--color-warning-bg-soft);
+  border-color: var(--color-warning-border);
 }
 
 .dashboard-card.success {
-  background: #ecfdf5;
-  border-color: #bbf7d0;
+  background: var(--color-success-bg-soft);
+  border-color: var(--color-success-border);
+}
+
+/* Micro-interacciones: tarjetas de resumen con leve elevación al pasar el ratón */
+.summary-grid div,
+.dashboard-card,
+.invoice-metrics div {
+  transition:
+    box-shadow var(--transition-base),
+    transform var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.summary-grid div:hover,
+.dashboard-card:hover,
+.invoice-metrics div:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
 }
 
 h3 {
@@ -558,16 +603,16 @@ h3 {
 }
 
 .invoice-estimate {
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
   padding: 16px;
-  background: #f9fafb;
+  background: var(--color-surface-soft);
   display: grid;
   gap: 12px;
 }
 
 .invoice-estimate > span {
-  color: #6b7280;
+  color: var(--color-muted);
   font-size: 13px;
   font-weight: 700;
 }
@@ -576,12 +621,12 @@ h3 {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   padding-bottom: 8px;
 }
 
 .invoice-estimate small {
-  color: #6b7280;
+  color: var(--color-muted);
 }
 
 .invoice-estimate strong {
@@ -597,7 +642,7 @@ h3 {
 }
 
 .invoice-detail-card {
-  border: 1px solid #dbeafe;
+  border: 1px solid var(--color-info-bg);
 }
 
 .invoice-detail-header {
@@ -606,7 +651,7 @@ h3 {
   gap: 18px;
   align-items: flex-start;
   padding-bottom: 18px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .invoice-detail-header h2 {
@@ -616,7 +661,7 @@ h3 {
 
 .invoice-detail-header p {
   margin: 0;
-  color: #6b7280;
+  color: var(--color-muted);
 }
 
 .invoice-detail-actions {
@@ -634,15 +679,15 @@ h3 {
 }
 
 .invoice-metrics div {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: 14px;
 }
 
 .invoice-metrics span {
   display: block;
-  color: #6b7280;
+  color: var(--color-muted);
   font-size: 13px;
   margin-bottom: 6px;
 }
@@ -697,7 +742,7 @@ h3 {
 .card h2,
 .card h3,
 .form-grid label {
-  color: #111827;
+  color: var(--color-ink);
 }
 
 /* Formularios claros dentro del panel */
@@ -705,16 +750,9 @@ h3 {
 .form-grid select,
 .payment-form input,
 .payment-form select {
-  background: #ffffff;
-  color: #111827;
-  border: 1px solid #d1d5db;
-}
-
-.form-grid input:focus,
-.form-grid select:focus,
-.payment-form input:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.25);
-  border-color: #2563eb;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border-strong);
 }
 
 /* Nueva factura: evitar que el resumen se corte */

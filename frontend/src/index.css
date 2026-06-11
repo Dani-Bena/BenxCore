@@ -1,3 +1,68 @@
+:root {
+  /* Superficies y bordes */
+  --color-bg: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f9fafb;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  /* Texto */
+  --color-ink: #111827;
+  --color-ink-soft: #1f2937;
+  --color-slate: #374151;
+  --color-muted: #6b7280;
+
+  /* Marca / acento */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-soft: rgba(37, 99, 235, 0.35);
+  --color-primary-ring: rgba(37, 99, 235, 0.25);
+
+  /* Texto sobre superficies oscuras (sidebar, login) */
+  --color-dark-text: #cbd5e1;
+  --color-dark-muted: #d1d5db;
+  --color-dark-border: #374151;
+  --color-dark-text-soft: #e5e7eb;
+
+  /* Estados */
+  --color-danger: #991b1b;
+  --color-danger-bg: #fee2e2;
+  --color-danger-border: #fecaca;
+  --color-danger-hover: #7f1d1d;
+
+  --color-success: #166534;
+  --color-success-bg: #dcfce7;
+  --color-success-bg-soft: #ecfdf5;
+  --color-success-border: #bbf7d0;
+
+  --color-warning: #92400e;
+  --color-warning-bg: #fef3c7;
+  --color-warning-bg-soft: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  --color-info: #1e40af;
+  --color-info-bg: #dbeafe;
+
+  /* Radios */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-pill: 999px;
+
+  /* Sombras */
+  --shadow-card: 0 8px 22px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 12px 28px rgba(17, 24, 39, 0.1);
+  --shadow-pop: 0 18px 35px rgba(37, 99, 235, 0.35);
+  --shadow-modal: 0 28px 70px rgba(0, 0, 0, 0.35);
+
+  /* Transiciones */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+}
+
 html,
 body,
 #root {
@@ -9,7 +74,7 @@ body,
 
 body {
   min-width: 320px;
-  background: #f3f4f6;
+  background: var(--color-bg);
 }
 
 #root {
