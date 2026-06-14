@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { API_URL, getErrorMessage } from "../api";
+import logo from "../assets/logo.png";
 import type { User } from "../types";
 
 type Props = {
@@ -42,7 +43,7 @@ export function LoginPage({ onLogin }: Props) {
     <main className="login-page">
       <section className="login-left">
         <div className="login-brand">
-          <div className="login-logo">B</div>
+          <img className="login-logo" src={logo} alt="BenxCore" />
           <div>
             <h1>BenxCore</h1>
             <p>ERP MVP</p>

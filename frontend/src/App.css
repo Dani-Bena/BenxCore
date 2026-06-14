@@ -94,12 +94,9 @@ select:focus {
   width: 52px;
   height: 52px;
   border-radius: var(--radius-2xl);
-  display: grid;
-  place-items: center;
-  background: var(--color-primary);
-  color: var(--color-surface);
-  font-size: 26px;
-  font-weight: 900;
+  background: var(--color-surface);
+  object-fit: cover;
+  object-position: top;
   box-shadow: var(--shadow-pop);
 }
 
@@ -253,12 +250,9 @@ select:focus {
   width: 44px;
   height: 44px;
   border-radius: var(--radius-lg);
-  background: var(--color-primary);
-  display: grid;
-  place-items: center;
-  color: var(--color-surface);
-  font-weight: 900;
-  font-size: 22px;
+  background: var(--color-surface);
+  object-fit: cover;
+  object-position: top;
 }
 
 .brand h1 {

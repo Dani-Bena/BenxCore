@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./App.css";
+import logo from "./assets/logo.png";
 import { ClientsPage } from "./pages/ClientsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
@@ -45,7 +46,7 @@ export default function App() {
     <main className="app-layout">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-logo">B</div>
+          <img className="brand-logo" src={logo} alt="BenxCore" />
           <div>
             <h1>BenxCore</h1>
             <p>ERP MVP</p>
