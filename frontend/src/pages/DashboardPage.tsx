@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest, money } from "../api";
-import type { Client, Invoice, InvoiceSeries, Product } from "../types";
+import type {
+  Client,
+  Invoice,
+  InvoiceSeries,
+  InvoiceStatusFilter,
+  Product,
+} from "../types";
 
 type Props = {
   token: string;
   notify: (message: string) => void;
+  onNavigateToInvoices: (filter: InvoiceStatusFilter) => void;
 };
 
 function clientName(invoice: Invoice) {
@@ -24,7 +31,7 @@ function statusLabel(status: string) {
   return labels[status] ?? status;
 }
 
-export function DashboardPage({ token, notify }: Props) {
+export function DashboardPage({ token, notify, onNavigateToInvoices }: Props) {
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [series, setSeries] = useState<InvoiceSeries[]>([]);
@@ -129,12 +136,48 @@ export function DashboardPage({ token, notify }: Props) {
             <strong>{money(stats.totalDue)}</strong>
           </div>
 
-          <div className="dashboard-card">
+          <div
+            className="dashboard-card clickable"
+            role="button"
+            tabIndex={0}
+            onClick={() =>
+              onNavigateToInvoices({
+                label: "Facturas pendientes de cobro",
+                statuses: ["ISSUED", "PARTIALLY_PAID", "OVERDUE"],
+              })
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                onNavigateToInvoices({
+                  label: "Facturas pendientes de cobro",
+                  statuses: ["ISSUED", "PARTIALLY_PAID", "OVERDUE"],
+                });
+              }
+            }}
+          >
             <span>Facturas pendientes</span>
             <strong>{stats.pendingInvoices}</strong>
           </div>
 
-          <div className="dashboard-card">
+          <div
+            className="dashboard-card clickable"
+            role="button"
+            tabIndex={0}
+            onClick={() =>
+              onNavigateToInvoices({
+                label: "Borradores",
+                statuses: ["DRAFT"],
+              })
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                onNavigateToInvoices({
+                  label: "Borradores",
+                  statuses: ["DRAFT"],
+                });
+              }
+            }}
+          >
             <span>Borradores</span>
             <strong>{stats.draftCount}</strong>
           </div>

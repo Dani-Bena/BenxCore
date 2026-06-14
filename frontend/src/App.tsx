@@ -8,7 +8,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { SeriesPage } from "./pages/SeriesPage";
 import { UsersPage } from "./pages/UsersPage";
-import type { User } from "./types";
+import type { InvoiceStatusFilter, User } from "./types";
 
 type Page =
   | "dashboard"
@@ -18,13 +18,32 @@ type Page =
   | "invoices"
   | "users";
 
+function loadStoredUser(): User | null {
+  const raw = localStorage.getItem("user");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
-  const [token, setToken] = useState("");
-  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState(() => localStorage.getItem("token") ?? "");
+  const [user, setUser] = useState<User | null>(loadStoredUser);
   const [page, setPage] = useState<Page>("dashboard");
   const [message, setMessage] = useState("");
+  const [invoiceStatusFilter, setInvoiceStatusFilter] =
+    useState<InvoiceStatusFilter>(null);
+
+  function goToInvoices(filter: InvoiceStatusFilter = null) {
+    setInvoiceStatusFilter(filter);
+    setPage("invoices");
+  }
 
   function handleLogin(nextToken: string, nextUser: User) {
+    localStorage.setItem("token", nextToken);
+    localStorage.setItem("user", JSON.stringify(nextUser));
     setToken(nextToken);
     setUser(nextUser);
     setPage("dashboard");
@@ -32,6 +51,8 @@ export default function App() {
   }
 
   function logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setToken("");
     setUser(null);
     setPage("dashboard");
@@ -90,7 +111,7 @@ export default function App() {
 
           <button
             className={page === "invoices" ? "active" : ""}
-            onClick={() => setPage("invoices")}
+            onClick={() => goToInvoices(null)}
           >
             Facturas
           </button>
@@ -114,7 +135,11 @@ export default function App() {
 
       <section className="content">
         {page === "dashboard" && (
-          <DashboardPage token={token} notify={setMessage} />
+          <DashboardPage
+            token={token}
+            notify={setMessage}
+            onNavigateToInvoices={goToInvoices}
+          />
         )}
 
         {page === "clients" && (
@@ -130,7 +155,11 @@ export default function App() {
         )}
 
         {page === "invoices" && (
-          <InvoicesPage token={token} notify={setMessage} />
+          <InvoicesPage
+            token={token}
+            notify={setMessage}
+            statusFilter={invoiceStatusFilter}
+          />
         )}
 
         {page === "users" && user.role === "ADMIN" && (
@@ -138,7 +167,11 @@ export default function App() {
         )}
 
         {page === "users" && user.role !== "ADMIN" && (
-          <DashboardPage token={token} notify={setMessage} />
+          <DashboardPage
+            token={token}
+            notify={setMessage}
+            onNavigateToInvoices={goToInvoices}
+          />
         )}
       </section>
     </main>

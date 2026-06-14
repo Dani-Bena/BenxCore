@@ -5,6 +5,8 @@ import type {
   Client,
   Invoice,
   InvoiceSeries,
+  InvoiceStatus,
+  InvoiceStatusFilter,
   JournalEntry,
   Payment,
   Product,
@@ -13,7 +15,24 @@ import type {
 type Props = {
   token: string;
   notify: (message: string) => void;
+  statusFilter?: InvoiceStatusFilter;
 };
+
+type StatusFilterOption = {
+  label: string;
+  statuses: InvoiceStatus[] | null;
+};
+
+const STATUS_FILTERS: StatusFilterOption[] = [
+  { label: "Todas", statuses: null },
+  { label: "Borradores", statuses: ["DRAFT"] },
+  {
+    label: "Facturas pendientes de cobro",
+    statuses: ["ISSUED", "PARTIALLY_PAID", "OVERDUE"],
+  },
+  { label: "Pagadas", statuses: ["PAID"] },
+  { label: "Canceladas", statuses: ["CANCELLED"] },
+];
 
 type AccountingEntry = JournalEntry & {
   invoice?: {
@@ -109,7 +128,7 @@ function draftTotals(form: InvoiceForm) {
   return { subtotal, tax, total };
 }
 
-export function InvoicesPage({ token, notify }: Props) {
+export function InvoicesPage({ token, notify, statusFilter }: Props) {
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [series, setSeries] = useState<InvoiceSeries[]>([]);
@@ -123,13 +142,26 @@ export function InvoicesPage({ token, notify }: Props) {
     "Cobro registrado desde frontend"
   );
   const [clientSearch, setClientSearch] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeStatusFilter, setActiveStatusFilter] = useState<StatusFilterOption>(
+    statusFilter ?? STATUS_FILTERS[0]
+  );
 
   const estimated = useMemo(() => draftTotals(form), [form]);
 
   const filteredInvoices = useMemo(() => {
     const term = clientSearch.trim().toLowerCase();
-    if (!term) return invoices;
+
     return invoices.filter((invoice) => {
+      if (
+        activeStatusFilter.statuses &&
+        !activeStatusFilter.statuses.includes(invoice.status)
+      ) {
+        return false;
+      }
+
+      if (!term) return true;
+
       const client = invoice.client;
       const haystack = [
         client?.legalName,
@@ -144,7 +176,7 @@ export function InvoicesPage({ token, notify }: Props) {
         .toLowerCase();
       return haystack.includes(term);
     });
-  }, [invoices, clientSearch]);
+  }, [invoices, clientSearch, activeStatusFilter]);
 
   const selectedInvoiceJournalEntries = useMemo(() => {
     if (!selectedInvoice) return [];
@@ -250,6 +282,7 @@ export function InvoicesPage({ token, notify }: Props) {
         }
       );
       setForm(emptyForm);
+      setShowCreateModal(false);
       notify(`Factura creada en borrador. ID ${data.invoice.id}`);
       await loadAll();
       await loadInvoice(data.invoice.id);
@@ -332,7 +365,9 @@ export function InvoicesPage({ token, notify }: Props) {
 
   return (
     <section className="page-stack">
-      <article className="card">
+      {showCreateModal && (
+        <Modal onClose={() => setShowCreateModal(false)}>
+        <article className="card">
         <div className="section-header">
           <div>
             <h2>Nueva factura</h2>
@@ -461,7 +496,9 @@ export function InvoicesPage({ token, notify }: Props) {
             <button onClick={createInvoice}>Crear factura</button>
           </aside>
         </div>
-      </article>
+        </article>
+        </Modal>
+      )}
 
       <article className="card">
         <div className="section-header">
@@ -477,7 +514,21 @@ export function InvoicesPage({ token, notify }: Props) {
               placeholder="Buscar por cliente o número de factura"
             />
             <button onClick={loadAll}>Refrescar</button>
+            <button onClick={() => setShowCreateModal(true)}>
+              Nueva factura
+            </button>
           </div>
+        </div>
+        <div className="status-filter-bar">
+          {STATUS_FILTERS.map((option) => (
+            <button
+              key={option.label}
+              className={activeStatusFilter.label === option.label ? "active" : ""}
+              onClick={() => setActiveStatusFilter(option)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
         <table>
           <thead>
@@ -532,7 +583,7 @@ export function InvoicesPage({ token, notify }: Props) {
                 <td colSpan={8} className="empty">
                   {invoices.length === 0
                     ? "No hay facturas."
-                    : "No hay facturas que coincidan con la búsqueda."}
+                    : "No hay facturas que coincidan con el filtro o la búsqueda."}
                 </td>
               </tr>
             )}

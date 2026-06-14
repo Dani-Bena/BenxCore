@@ -52,6 +52,11 @@ export type InvoiceStatus =
   | "OVERDUE"
   | "CANCELLED";
 
+export type InvoiceStatusFilter = {
+  label: string;
+  statuses: InvoiceStatus[];
+} | null;
+
 export type InvoiceLine = {
   id: number;
   lineNumber: number;
