@@ -387,6 +387,10 @@ select:focus {
   flex-wrap: wrap;
 }
 
+.invoice-search {
+  width: 260px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

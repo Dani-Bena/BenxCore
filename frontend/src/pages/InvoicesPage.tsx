@@ -122,8 +122,29 @@ export function InvoicesPage({ token, notify }: Props) {
   const [paymentNotes, setPaymentNotes] = useState(
     "Cobro registrado desde frontend"
   );
+  const [clientSearch, setClientSearch] = useState("");
 
   const estimated = useMemo(() => draftTotals(form), [form]);
+
+  const filteredInvoices = useMemo(() => {
+    const term = clientSearch.trim().toLowerCase();
+    if (!term) return invoices;
+    return invoices.filter((invoice) => {
+      const client = invoice.client;
+      const haystack = [
+        client?.legalName,
+        client?.name,
+        client?.tradeName,
+        client?.taxId,
+        client?.nif,
+        invoice.invoiceNumber,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [invoices, clientSearch]);
 
   const selectedInvoiceJournalEntries = useMemo(() => {
     if (!selectedInvoice) return [];
@@ -448,7 +469,15 @@ export function InvoicesPage({ token, notify }: Props) {
             <h2>Facturas</h2>
             <p className="muted">Emite, consulta, cobra y descarga documentos.</p>
           </div>
-          <button onClick={loadAll}>Refrescar</button>
+          <div className="row-actions">
+            <input
+              className="invoice-search"
+              value={clientSearch}
+              onChange={(e) => setClientSearch(e.target.value)}
+              placeholder="Buscar por cliente o número de factura"
+            />
+            <button onClick={loadAll}>Refrescar</button>
+          </div>
         </div>
         <table>
           <thead>
@@ -464,7 +493,7 @@ export function InvoicesPage({ token, notify }: Props) {
             </tr>
           </thead>
           <tbody>
-            {invoices.map((invoice) => (
+            {filteredInvoices.map((invoice) => (
               <tr key={invoice.id}>
                 <td>{invoice.id}</td>
                 <td>{invoice.invoiceNumber ?? "-"}</td>
@@ -498,10 +527,12 @@ export function InvoicesPage({ token, notify }: Props) {
                 </td>
               </tr>
             ))}
-            {invoices.length === 0 && (
+            {filteredInvoices.length === 0 && (
               <tr>
                 <td colSpan={8} className="empty">
-                  No hay facturas.
+                  {invoices.length === 0
+                    ? "No hay facturas."
+                    : "No hay facturas que coincidan con la búsqueda."}
                 </td>
               </tr>
             )}
