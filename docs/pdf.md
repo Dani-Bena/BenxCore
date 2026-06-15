@@ -1,681 +1,129 @@
-# Documentación del módulo de generación de PDFs — BenxCore
+# Documentación del módulo de PDFs — BenxCore
 
-## 1. Objetivo del módulo
+## 1. Objetivo
 
-El módulo de generación de PDFs de BenxCore permite crear documentos descargables a partir de la información ya registrada en el sistema.
+Este módulo se encarga de generar los dos documentos descargables del sistema: el PDF de una factura emitida y el PDF de un comprobante de pago. La idea es darle a todo lo que ya está registrado en base de datos una salida en papel (o PDF) que se pueda entregar a un cliente.
 
-Actualmente se generan dos tipos de documentos:
+Para entender por qué hay dos documentos distintos en lugar de uno, conviene tener claros estos tres conceptos:
 
-1. PDF de factura emitida.
-2. PDF de comprobante de pago.
+```txt
+Factura     = documento comercial/fiscal
+Pago        = movimiento económico registrado en base de datos
+Comprobante = justificante documental de un pago concreto
+```
 
-El objetivo es separar correctamente los documentos comerciales/fiscales de los documentos financieros asociados al cobro.
+La factura representa lo que se ha vendido. El pago representa que ha entrado dinero. El comprobante es la prueba en papel de ese cobro. Mantenerlos separados evita mezclar dos cosas que cambian en momentos distintos: la factura se genera una vez al emitir, y los comprobantes se van generando uno por cada pago que llegue después.
 
----
-
-## 2. Tipos de PDF implementados
-
-### 2.1. PDF de factura
-
-El PDF de factura representa el documento comercial emitido al cliente.
-
-Endpoint:
+## 2. PDF de factura
 
 ```txt
 GET /api/invoices/:id/pdf
 ```
 
-Este PDF contiene:
+Incluye: número de factura, fechas de emisión y vencimiento, estado, datos fiscales del emisor y del cliente (los del snapshot, no los actuales de `Company`/`Client`), líneas con descuentos e IVA, resumen de impuestos por tipo de IVA, subtotal, total de IVA y total.
 
-* Número de factura.
-* Fecha de emisión.
-* Fecha de vencimiento.
-* Estado de la factura.
-* Datos fiscales del emisor.
-* Datos fiscales del cliente.
-* Líneas de factura.
-* Descuentos por línea.
-* IVA por línea.
-* Resumen de impuestos.
-* Subtotal.
-* Total de IVA.
-* Total de factura.
-* Notas de la factura, si existen.
+Deliberadamente **no incluye** historial de pagos, asientos contables ni nada de auditoría interna. La razón es que la factura debe ser un documento estable: si alguien descarga el PDF antes y después de que se registre un pago, el contenido principal de la factura no debería cambiar. Los pagos se documentan aparte, con su propio comprobante.
 
-No contiene:
+Reglas para poder generarlo:
 
-* Historial de pagos.
-* Tabla de cobros registrados.
-* Asientos contables.
-* Información interna de auditoría.
+* La factura no puede estar en `DRAFT` — un borrador todavía no es un documento oficial.
+* La factura no puede estar `CANCELLED` — no debe circular como documento válido.
+* Tiene que tener `invoiceNumber` e `issueDate`, es decir, tiene que haber sido emitida.
 
-Esta decisión permite que el PDF de factura sea un documento estable. La factura emitida no debe cambiar visualmente cada vez que se registra un pago.
+Y como decía arriba, usa siempre los datos fiscales **congelados** dentro de la propia factura (`issuerName`, `issuerNif`, `customerNif`, etc.), nunca los datos actuales de la empresa o el cliente.
 
----
-
-### 2.2. PDF de comprobante de pago
-
-El PDF de comprobante de pago representa un justificante financiero asociado a un pago concreto.
-
-Endpoint:
+## 3. PDF de comprobante de pago
 
 ```txt
 GET /api/invoices/:id/payments/:paymentId/receipt
 ```
 
-Este PDF contiene:
+Incluye: número de comprobante, número de factura asociada, fecha de pago, datos de emisor y cliente, importe pagado, método y referencia del pago, notas si las hay, y el estado de la factura tras ese pago (total pagado acumulado e importe pendiente).
 
-* Número de comprobante.
-* Número de factura asociada.
-* Fecha de pago.
-* Datos del emisor.
-* Datos del cliente.
-* Importe pagado.
-* Método de pago.
-* Referencia del pago.
-* Notas del pago, si existen.
-* Estado de la factura tras el pago.
-* Total pagado acumulado.
-* Importe pendiente.
+Reglas:
 
-Este documento no sustituye a la factura. Sirve como justificante del cobro.
+* El pago tiene que existir y pertenecer a esa factura (`payment.invoiceId = invoiceId`), y la factura tiene que pertenecer a la empresa autenticada — así se evita generar comprobantes cruzando datos de otra empresa.
+* La factura asociada tiene que estar emitida (`invoiceNumber` + `issueDate`).
 
----
-
-## 3. Separación conceptual
-
-BenxCore diferencia entre tres conceptos:
-
-```txt
-Factura = documento comercial/fiscal
-Pago = evento financiero registrado en base de datos
-Comprobante = documento justificativo de un pago
-```
-
-Esta separación evita mezclar responsabilidades.
-
-La factura representa lo que se ha vendido y facturado.
-
-El pago representa un movimiento económico recibido.
-
-El comprobante representa una evidencia documental de ese pago.
-
----
-
-## 4. Reglas del PDF de factura
-
-### 4.1. Solo facturas emitidas
-
-No se permite generar PDF oficial de una factura en estado `DRAFT`.
-
-Motivo:
-
-```txt
-Una factura en borrador todavía no es un documento oficial.
-```
-
-Si se intenta generar el PDF de una factura en borrador, el sistema devuelve error.
-
----
-
-### 4.2. No se genera PDF de facturas canceladas
-
-No se genera PDF oficial de facturas en estado `CANCELLED`.
-
-Motivo:
-
-```txt
-Una factura cancelada no debe circular como documento comercial válido.
-```
-
----
-
-### 4.3. La factura debe tener número oficial
-
-Para generar el PDF, la factura debe tener:
-
-* `invoiceNumber`
-* `issueDate`
-
-Esto garantiza que la factura ya ha sido emitida formalmente.
-
----
-
-### 4.4. Uso de snapshot fiscal
-
-El PDF de factura usa los datos fiscales congelados dentro de la factura:
-
-* `issuerName`
-* `issuerNif`
-* `issuerAddress`
-* `issuerEmail`
-* `issuerPhone`
-* `customerName`
-* `customerNif`
-* `customerAddress`
-* `customerEmail`
-* `customerPhone`
-
-No usa directamente los datos actuales de `Company` o `Client`.
-
-Esto es importante porque si mañana cambia la dirección del cliente o de la empresa, las facturas antiguas deben conservar los datos originales.
-
----
-
-## 5. Reglas del PDF de comprobante de pago
-
-### 5.1. El pago debe existir
-
-El comprobante solo se genera si existe un `Payment` con:
-
-```txt
-payment.id = paymentId
-payment.invoiceId = invoiceId
-invoice.companyId = empresa autenticada
-```
-
-Esto evita acceder a pagos de otras empresas o generar comprobantes con datos inconsistentes.
-
----
-
-### 5.2. La factura debe estar emitida
-
-El comprobante de pago solo se genera si la factura asociada tiene:
-
-* `invoiceNumber`
-* `issueDate`
-
-Esto evita generar comprobantes de pagos asociados a documentos no emitidos oficialmente.
-
----
-
-### 5.3. Cada pago tiene su propio comprobante
-
-Cada pago registrado puede tener su propio PDF.
-
-Ejemplo:
+Cada pago tiene su propio comprobante. Si una factura recibe dos pagos, hay dos PDFs distintos:
 
 ```txt
 Factura F2026-000002
-
-Pago 1: 500.00 €
-Comprobante: REC-3-F2026-000002.pdf
-
-Pago 2: 806.80 €
-Comprobante: REC-4-F2026-000002.pdf
+  Pago 1: 500.00 €    → REC-3-F2026-000002.pdf
+  Pago 2: 806.80 €    → REC-4-F2026-000002.pdf
 ```
 
-Esto permite justificar pagos parciales y pagos finales por separado.
+Esto permite justificar pagos parciales y finales por separado, que es como se suele pedir en la práctica.
 
----
+## 4. Logo y estilo
 
-## 6. Endpoints implementados
+Ambos PDFs intentan cargar un logo de empresa desde `assets/company-logo.png` (o `.jpg`/`.jpeg`) mediante `utils/pdf-logo.ts`. Si el archivo no existe, el PDF se genera igual, simplemente sin logo — no es un error, solo un detalle visual opcional.
 
-### PDF de factura
+El estilo (fuentes y tamaños de texto) está centralizado en `utils/pdf-style.ts`, para que la factura y el comprobante compartan la misma apariencia y no haya que ajustar tamaños por separado en cada servicio.
 
-```txt
-GET /api/invoices/:id/pdf
-```
+## 5. Seguridad
 
-Descripción:
+Ambos endpoints requieren `Authorization: Bearer <token>`, y además comprueban que la factura (y, en el caso del comprobante, también el pago) pertenezcan a la empresa del usuario autenticado. Así un usuario nunca puede descargar el PDF de una factura o un pago de otra empresa solo por adivinar el `id`.
 
-Genera el PDF oficial de una factura emitida.
+Importante: **generar un PDF no modifica nada en la base de datos**. Es una operación de solo lectura sobre datos que ya existían.
 
-Parámetros:
+## 6. Probarlo con PowerShell
 
-| Parámetro | Descripción      |
-| --------- | ---------------- |
-| `id`      | ID de la factura |
-
-Respuesta:
-
-```txt
-Content-Type: application/pdf
-Content-Disposition: inline; filename="F2026-000001.pdf"
-```
-
-Ejemplo:
-
-```txt
-GET /api/invoices/2/pdf
-```
-
----
-
-### PDF de comprobante de pago
-
-```txt
-GET /api/invoices/:id/payments/:paymentId/receipt
-```
-
-Descripción:
-
-Genera el PDF de comprobante de un pago asociado a una factura.
-
-Parámetros:
-
-| Parámetro   | Descripción      |
-| ----------- | ---------------- |
-| `id`        | ID de la factura |
-| `paymentId` | ID del pago      |
-
-Respuesta:
-
-```txt
-Content-Type: application/pdf
-Content-Disposition: inline; filename="REC-3-F2026-000002.pdf"
-```
-
-Ejemplo:
-
-```txt
-GET /api/invoices/2/payments/3/receipt
-```
-
----
-
-## 7. Seguridad y autorización
-
-Ambos endpoints están protegidos mediante JWT.
-
-El usuario debe enviar el token en la cabecera:
-
-```txt
-Authorization: Bearer <token>
-```
-
-Además, el sistema valida que:
-
-* La factura pertenece a la empresa autenticada.
-* El pago pertenece a esa factura.
-* La factura pertenece a la empresa autenticada.
-
-Esto evita que un usuario pueda descargar PDFs de facturas o pagos de otra empresa.
-
----
-
-## 8. Ejemplos de uso con PowerShell
-
-### 8.1. Login
+Login:
 
 ```powershell
 $response = Invoke-RestMethod `
   -Uri "http://localhost:3000/api/auth/login" `
   -Method POST `
   -ContentType "application/json" `
-  -Body '{
-    "email": "daniel@test.com",
-    "password": "12345678"
-  }'
+  -Body '{ "email": "daniel@test.com", "password": "12345678" }'
 ```
 
----
-
-### 8.2. Descargar PDF de factura
+Descargar el PDF de una factura:
 
 ```powershell
 Invoke-WebRequest `
   -Uri "http://localhost:3000/api/invoices/2/pdf" `
-  -Headers @{
-    Authorization = "Bearer $($response.token)"
-  } `
+  -Headers @{ Authorization = "Bearer $($response.token)" } `
   -OutFile ".\factura-test.pdf"
-```
 
-Abrir:
-
-```powershell
 start .\factura-test.pdf
 ```
 
----
-
-### 8.3. Listar pagos de una factura
+Listar los pagos de una factura:
 
 ```powershell
 Invoke-RestMethod `
   -Uri "http://localhost:3000/api/invoices/2/payments" `
   -Method GET `
-  -Headers @{
-    Authorization = "Bearer $($response.token)"
-  } | ConvertTo-Json -Depth 10
+  -Headers @{ Authorization = "Bearer $($response.token)" } | ConvertTo-Json -Depth 10
 ```
 
----
-
-### 8.4. Descargar comprobante de pago
+Descargar el comprobante de un pago:
 
 ```powershell
 Invoke-WebRequest `
   -Uri "http://localhost:3000/api/invoices/2/payments/3/receipt" `
-  -Headers @{
-    Authorization = "Bearer $($response.token)"
-  } `
+  -Headers @{ Authorization = "Bearer $($response.token)" } `
   -OutFile ".\comprobante-pago.pdf"
-```
 
-Abrir:
-
-```powershell
 start .\comprobante-pago.pdf
 ```
 
----
+## 7. Diseño técnico
 
-## 9. Contenido del PDF de factura
+La generación está repartida en dos servicios, cada uno con su responsabilidad bien delimitada:
 
-El PDF de factura se estructura en las siguientes secciones:
+* **`invoice-pdf.service.ts`**: busca la factura emitida, valida que se pueda exportar, genera el PDF y devuelve el buffer junto con el nombre de archivo.
+* **`payment-receipt-pdf.service.ts`**: busca el pago y comprueba que pertenece a la empresa y que la factura está emitida, genera el comprobante y devuelve buffer + nombre.
 
-### Cabecera
+Ambos se exponen desde `invoices.routes.ts` (`GET /api/invoices/:id/pdf` y `GET /api/invoices/:id/payments/:paymentId/receipt`), y comparten las utilidades de logo y estilo mencionadas arriba.
 
-Incluye:
+## 8. Lo que falta
 
-* Título `FACTURA`.
-* Número de factura.
-* Fecha de emisión.
-* Fecha de vencimiento.
-* Estado.
+A nivel de contenido, los PDFs ya cubren lo esencial para un TFG. Las mejoras que tengo anotadas son sobre todo de acabado visual y de gestión documental:
 
----
-
-### Datos fiscales
-
-Incluye dos bloques:
-
-#### Emisor
-
-* Nombre.
-* NIF.
-* Dirección.
-* Email.
-* Teléfono.
-
-#### Cliente
-
-* Nombre.
-* NIF.
-* Dirección.
-* Email.
-* Teléfono.
-
----
-
-### Líneas de factura
-
-Incluye:
-
-* Número de línea.
-* Descripción.
-* Cantidad.
-* Precio unitario.
-* Descuento.
-* IVA.
-* Total de línea.
-
----
-
-### Resumen de impuestos
-
-Incluye:
-
-* Tipo de IVA.
-* Base imponible.
-* Cuota de IVA.
-
----
-
-### Totales
-
-Incluye:
-
-* Subtotal.
-* IVA.
-* Total.
-
-No incluye pagos, porque los pagos pertenecen al flujo financiero y se documentan mediante comprobantes.
-
----
-
-## 10. Contenido del PDF de comprobante de pago
-
-El PDF de comprobante de pago se estructura en estas secciones:
-
-### Cabecera
-
-Incluye:
-
-* Título `COMPROBANTE DE PAGO`.
-* Número de comprobante.
-* Número de factura.
-* Fecha de pago.
-
----
-
-### Datos del emisor
-
-Incluye:
-
-* Nombre.
-* NIF.
-* Dirección.
-* Email.
-* Teléfono.
-
----
-
-### Datos del cliente
-
-Incluye:
-
-* Nombre.
-* NIF.
-* Dirección.
-* Email.
-* Teléfono.
-
----
-
-### Detalle del pago
-
-Incluye:
-
-* Número de factura.
-* Fecha de factura.
-* Total de factura.
-* Importe pagado.
-* Método de pago.
-* Referencia.
-* Notas, si existen.
-
----
-
-### Estado de la factura tras el pago
-
-Incluye:
-
-* Estado actual de la factura.
-* Total pagado acumulado.
-* Importe pendiente.
-
----
-
-## 11. Relación con facturación
-
-El módulo PDF se apoya en el módulo de facturación.
-
-Flujo general:
-
-```txt
-Crear factura en borrador
-    ↓
-Emitir factura
-    ↓
-Generar PDF de factura
-    ↓
-Registrar pago
-    ↓
-Generar comprobante de pago
-```
-
-Estados relacionados:
-
-```txt
-DRAFT → no permite PDF oficial
-ISSUED → permite PDF de factura
-PARTIALLY_PAID → permite PDF de factura y comprobantes
-PAID → permite PDF de factura y comprobantes
-CANCELLED → no permite PDF oficial
-```
-
----
-
-## 12. Relación con contabilidad
-
-Los PDFs no generan contabilidad por sí mismos.
-
-La contabilidad se genera en estos momentos:
-
-* Al emitir factura.
-* Al registrar pago.
-
-Los PDFs simplemente representan documentalmente operaciones ya registradas.
-
-Esto evita que la descarga de un PDF tenga efectos secundarios sobre la base de datos.
-
-Regla importante:
-
-```txt
-Generar PDF no modifica datos.
-```
-
----
-
-## 13. Diseño técnico
-
-El módulo se implementa mediante servicios separados:
-
-```txt
-invoice-pdf.service.ts
-payment-receipt-pdf.service.ts
-```
-
-Responsabilidades:
-
-### invoice-pdf.service.ts
-
-* Buscar factura emitida.
-* Validar que puede exportarse.
-* Generar PDF de factura.
-* Devolver buffer y nombre de archivo.
-
-### payment-receipt-pdf.service.ts
-
-* Buscar pago asociado a factura.
-* Validar que pertenece a la empresa.
-* Validar que la factura está emitida.
-* Generar PDF de comprobante.
-* Devolver buffer y nombre de archivo.
-
-### invoices.routes.ts
-
-Expone los endpoints HTTP:
-
-```txt
-GET /api/invoices/:id/pdf
-GET /api/invoices/:id/payments/:paymentId/receipt
-```
-
----
-
-## 14. Decisiones de diseño
-
-### 14.1. Factura sin historial de pagos
-
-Se decidió no incluir pagos dentro del PDF oficial de factura.
-
-Motivo:
-
-```txt
-La factura debe ser un documento estable.
-```
-
-Si el usuario descarga la misma factura antes y después de registrar pagos, el contenido principal no debería cambiar.
-
----
-
-### 14.2. Comprobante separado
-
-Los pagos tienen su propio comprobante.
-
-Motivo:
-
-```txt
-El pago es un evento financiero independiente.
-```
-
-Esto permite justificar pagos parciales, pagos finales o múltiples pagos de una misma factura.
-
----
-
-### 14.3. PDFs sin efectos secundarios
-
-Generar un PDF no crea ni modifica datos.
-
-Motivo:
-
-```txt
-La generación documental debe ser una operación de lectura.
-```
-
----
-
-## 15. Limitaciones actuales
-
-La versión actual no incluye todavía:
-
-* Logo de empresa.
-* Firma digital.
-* Código QR de verificación.
-* Plantillas personalizables.
-* Numeración específica de comprobantes.
-* Almacenamiento permanente del PDF generado.
-* Envío por email.
-* Factura electrónica.
-* Descarga masiva de PDFs.
-* Traducción multiidioma.
-* Personalización visual por empresa.
-
----
-
-## 16. Mejoras futuras
-
-Posibles mejoras:
-
-* Añadir logotipo de empresa al PDF.
-* Añadir plantilla visual configurable.
-* Guardar PDFs generados en almacenamiento.
-* Crear historial de documentos enviados.
-* Generar recibos agrupados.
-* Añadir endpoint de envío por email.
-* Añadir código QR para verificar factura.
-* Añadir firma digital.
-* Crear PDF de proforma.
-* Crear PDF de factura rectificativa.
-* Exportar facturas en lote.
-* Añadir soporte multiidioma.
-* Añadir moneda configurable.
-
----
-
-## 17. Resumen
-
-El módulo de PDFs de BenxCore permite generar documentos descargables para dos operaciones clave:
-
-* Factura emitida.
-* Comprobante de pago.
-
-La factura queda como documento comercial/fiscal estable.
-
-El comprobante de pago queda como documento financiero asociado a un cobro concreto.
-
-Esta separación mejora la claridad del sistema y hace que BenxCore tenga una estructura más cercana a un ERP real.
+* Pie legal, numeración de página y datos bancarios.
+* Colores corporativos / plantilla configurable por empresa.
+* Guardar una copia del PDF generado (hoy se genera al vuelo y no se almacena).
+* Envío por email, código QR de verificación, firma digital — estas últimas entran más en el terreno de la factura electrónica, que queda fuera del alcance actual y está recogida como línea futura en `tfg-status-and-roadmap.md`.

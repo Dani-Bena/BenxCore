@@ -247,6 +247,25 @@ El PDF de factura no incluye historial de pagos. La factura se mantiene como doc
 
 El comprobante de pago documenta un pago concreto asociado a una factura.
 
+Ambos PDFs incluyen el logo de la empresa si existe un archivo `company-logo.png/jpg/jpeg` en la carpeta `assets/` del backend (`utils/pdf-logo.ts`). Si no hay logo, el PDF se genera igualmente sin él. El estilo (fuentes y tamaños) está centralizado en `utils/pdf-style.ts` para que ambos documentos tengan un aspecto consistente.
+
+---
+
+### 4.10. Usuarios y roles
+
+Permite que el usuario `ADMIN` de una empresa gestione el resto de usuarios de su organización.
+
+Incluye:
+
+* Roles: `ADMIN`, `ACCOUNTANT`, `USER` (más `MANAGER` y `VIEWER` reservados en el modelo de datos para una futura gestión de permisos más fina).
+* Listado, alta, edición y baja (soft delete) de usuarios.
+* Restricción: solo un `ADMIN` puede gestionar usuarios.
+* Garantía de que siempre queda al menos un `ADMIN` activo por empresa.
+* Email único a nivel global de la aplicación.
+* Auditoría de creación, edición y baja de usuarios.
+
+Detalle completo en `usuarios.md`.
+
 ---
 
 ## 5. Seguridad
@@ -263,6 +282,10 @@ role
 
 La mayoría de consultas filtran por `companyId`, evitando acceso cruzado entre empresas.
 
+La gestión de usuarios (`/api/users`) añade una segunda comprobación: además de estar autenticado, el usuario debe tener `role = "ADMIN"`. El resto de módulos (clientes, productos, facturas, contabilidad...) no diferencian todavía por rol: cualquier usuario autenticado de la empresa puede usarlos.
+
+Las excepciones y errores no controlados se centralizan en un middleware global (`middleware/error.middleware.ts`): los errores de negocio (`AppError`) se devuelven con su código HTTP y mensaje, y cualquier otro error se registra en consola y responde como `500` genérico.
+
 ---
 
 ## 6. Auditoría
@@ -277,6 +300,7 @@ Ejemplos:
 * Emisión de factura.
 * Registro de pago.
 * Creación de asiento contable indirectamente ligada a factura o pago.
+* Alta, edición o baja de usuarios.
 
 La auditoría permite reconstruir cambios importantes del sistema.
 
@@ -352,19 +376,20 @@ Generación de comprobante de pago
 
 ## 9. Limitaciones actuales
 
-La versión actual todavía no incluye:
+La versión actual ya cuenta con un frontend funcional (ver `frontend.md`), gestión de usuarios por empresa (`usuarios.md`), manejo global de errores y un primer conjunto de tests automáticos (`backend/tests/`) sobre los flujos de facturación y gestión de usuarios.
 
-* Frontend completo.
-* Tests automáticos.
-* Roles avanzados.
-* Facturas rectificativas.
-* Asientos manuales.
+Todavía no incluye:
+
+* Roles `MANAGER`/`VIEWER` con permisos diferenciados (existen en el modelo, pero sin lógica asociada).
+* Facturas rectificativas (el modelo ya tiene `CORRECTIVE` y `rectifiesInvoiceId`, pero falta el flujo).
+* Asientos manuales (`source = MANUAL`).
+* Validación formal de que cada asiento esté cuadrado antes de guardarlo.
+* Control automático de facturas vencidas (`OVERDUE`).
 * Libro diario y libro mayor.
 * Factura electrónica.
 * Envío de emails.
 * Firma digital.
 * QR de verificación.
-* Gestión de usuarios por empresa.
 * Inventario.
 * Proveedores y compras.
 

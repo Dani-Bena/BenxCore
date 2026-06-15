@@ -495,7 +495,65 @@ Obtiene un asiento concreto con sus líneas y cuentas asociadas.
 
 ---
 
-## 10. Autorización
+## 10. Usuarios
+
+Gestión de usuarios de la empresa autenticada. Todos los endpoints requieren que el usuario que hace la petición tenga rol `ADMIN` (ver `usuarios.md` para el detalle de roles y reglas).
+
+### `GET /api/users`
+
+Lista los usuarios de la empresa.
+
+Query opcional:
+
+```txt
+?includeInactive=true
+```
+
+---
+
+### `GET /api/users/:id`
+
+Obtiene un usuario concreto de la empresa.
+
+---
+
+### `POST /api/users`
+
+Crea un usuario nuevo dentro de la empresa autenticada.
+
+Body:
+
+```json
+{
+  "name": "Ana Contable",
+  "email": "ana@demo.com",
+  "password": "12345678",
+  "role": "ACCOUNTANT"
+}
+```
+
+`role` es opcional (`ADMIN`, `ACCOUNTANT` o `USER`); por defecto es `USER`.
+
+---
+
+### `PUT /api/users/:id`
+
+Actualiza un usuario. Solo modifica los campos enviados (`name`, `email`, `password`, `role`, `active`).
+
+Reglas:
+
+* No se puede quitar el rol `ADMIN` ni desactivar al último `ADMIN` activo de la empresa (`409`).
+* Si se cambia el `email`, debe ser único en toda la aplicación.
+
+---
+
+### `DELETE /api/users/:id`
+
+Desactiva un usuario (soft delete). No elimina físicamente el registro.
+
+---
+
+## 11. Autorización
 
 Todos los endpoints privados requieren:
 
@@ -514,10 +572,13 @@ Esto aplica a:
 * Pagos.
 * Asientos contables.
 * PDFs.
+* Usuarios.
+
+Además, las rutas de `/api/users` comprueban que el usuario autenticado tenga rol `ADMIN`.
 
 ---
 
-## 11. Estados principales
+## 12. Estados principales
 
 ### Factura
 
@@ -545,9 +606,17 @@ PAYMENT
 MANUAL
 ```
 
+### Rol de usuario
+
+```txt
+ADMIN
+ACCOUNTANT
+USER
+```
+
 ---
 
-## 12. Flujo completo de ejemplo
+## 13. Flujo completo de ejemplo
 
 ```txt
 POST /api/auth/login

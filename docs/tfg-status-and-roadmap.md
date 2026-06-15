@@ -1,5 +1,19 @@
 # Estado del TFG y roadmap técnico — BenxCore
 
+## 0. Actualización (15/06/2026)
+
+Este documento se escribió cuando el backend ya estaba avanzado pero antes de tener frontend, tests y algunas mejoras de PDF/errores. Desde entonces se ha avanzado bastante en varios de los puntos que aquí se marcaban como "imprescindibles" o "muy recomendables":
+
+* Hay **tests automáticos** (`backend/tests/`) cubriendo el flujo de facturación completo y la gestión de usuarios.
+* Hay **manejo global de errores** (`middleware/error.middleware.ts`).
+* Hay un **frontend funcional** (React + Vite) que cubre login, dashboard, clientes, productos, series, facturas/pagos/PDFs y gestión de usuarios. Ver `frontend.md`.
+* Los **PDFs ahora incluyen el logo de empresa** si existe (`utils/pdf-logo.ts`), y se centralizó el estilo (`utils/pdf-style.ts`).
+* Se ha añadido un **módulo de usuarios y roles** (`ADMIN`, `ACCOUNTANT`, `USER`, con `MANAGER`/`VIEWER` reservados). Ver `usuarios.md`.
+
+El resto del documento se mantiene tal cual se escribió en su momento (sirve como registro de cómo se vio el proyecto en esa fase), con anotaciones puntuales donde un punto ya está resuelto. La sección 8 (prioridades) sí se ha actualizado para reflejar lo que queda.
+
+---
+
 ## 1. Valoración general
 
 El backend de BenxCore se encuentra en un estado avanzado para un Trabajo de Fin de Grado si se presenta como un prototipo funcional de ERP ligero orientado a facturación, cobros y contabilidad básica.
@@ -105,13 +119,19 @@ Esto es importante en sistemas empresariales.
 
 ---
 
+### 2.7. Multiusuario con roles
+
+Cada empresa puede tener varios usuarios con distintos roles (`ADMIN`, `ACCOUNTANT`, `USER`), gestionados desde la propia aplicación. El sistema garantiza que siempre haya al menos un `ADMIN` por empresa, y las altas/bajas/ediciones quedan auditadas igual que el resto de entidades.
+
+Esto refuerza el argumento de "no es solo un CRUD": hay reglas de negocio también en cómo se administra el propio sistema.
+
+---
+
 ## 3. Riesgos actuales
 
 ### 3.1. Falta de tests
 
-El mayor riesgo ahora mismo es que el backend ha crecido bastante y todavía no tiene pruebas automáticas.
-
-Para un TFG, esto no invalida el proyecto, pero sí sería una mejora importante.
+**Resuelto parcialmente.** Ya existen tests automáticos (`backend/tests/invoice-flow.test.ts`, `backend/tests/users.test.ts`) que cubren el ciclo completo de una factura (borrador → emisión → pago → asientos) y la gestión de usuarios con roles. Quedaría bien ampliar la cobertura a clientes, productos y series, pero el riesgo principal que describía este punto ya está mitigado.
 
 ---
 
@@ -130,7 +150,7 @@ Hace falta un documento claro que explique:
 
 ### 3.3. Roles todavía básicos
 
-Actualmente existe usuario administrador, pero no hay una gestión completa de usuarios y permisos por empresa.
+**Resuelto en parte.** Ahora cada empresa puede tener varios usuarios (`ADMIN`, `ACCOUNTANT`, `USER`) gestionados desde `/api/users` y desde el frontend (ver `usuarios.md`). Lo que falta es que esos roles tengan permisos realmente distintos en el resto de módulos: hoy, fuera de la gestión de usuarios, cualquier usuario autenticado de la empresa puede hacer lo mismo. Los roles `MANAGER` y `VIEWER` existen en el modelo pero todavía no tienen comportamiento propio.
 
 Para MVP puede valer, pero conviene mencionarlo como trabajo futuro.
 
@@ -211,20 +231,11 @@ Esto facilita la evaluación y la demo.
 
 ---
 
-### 4.4. Tests mínimos
+### 4.4. Tests mínimos — hecho
 
-Como mínimo, convendría tener tests de:
+`backend/tests/invoice-flow.test.ts` cubre el flujo crítico: login, factura en borrador, emisión, numeración, pagos parciales y totales, y generación de asientos. `backend/tests/users.test.ts` cubre alta de usuarios, roles y restricciones de `ADMIN`.
 
-* Login.
-* Crear cliente.
-* Crear producto.
-* Crear factura en borrador.
-* Emitir factura.
-* Registrar pago.
-* Comprobar que no se puede editar factura emitida.
-* Comprobar que no se puede pagar más de lo pendiente.
-
-No hace falta cubrir todo, pero sí los flujos críticos.
+Pendiente (no bloqueante): tests específicos de clientes y productos (alta, duplicados de NIF/código, soft delete).
 
 ---
 
@@ -242,13 +253,9 @@ Aunque ahora generemos los asientos automáticamente bien, añadir una validaci�
 
 ---
 
-### 4.6. Manejo global de errores
+### 4.6. Manejo global de errores — hecho
 
-Ahora se manejan errores por módulo.
-
-Sería recomendable añadir un middleware global de errores para Express, aunque se mantengan errores específicos de servicio.
-
-Esto daría más consistencia a la API.
+`middleware/error.middleware.ts` centraliza la respuesta de errores: los errores de negocio (`AppError`) devuelven su código y mensaje, y cualquier excepción no controlada se registra en consola y responde `500`. Se mantiene además la validación específica por servicio (Zod en rutas, errores de dominio en servicios).
 
 ---
 
@@ -299,24 +306,11 @@ Esto ayuda mucho en la memoria.
 
 ## 5. Muy recomendable antes de la defensa
 
-### 5.1. Frontend mínimo
+### 5.1. Frontend mínimo — hecho
 
-Aunque el backend sea potente, para la defensa un frontend simple ayuda muchísimo.
+Hay un frontend en React + Vite con login, dashboard, clientes, productos, series, facturas (con detalle, emisión, pagos, descarga de PDF y comprobantes) y gestión de usuarios para `ADMIN`. Cubre el flujo completo de demo. Detalle en `frontend.md`.
 
-Pantallas mínimas recomendadas:
-
-* Login.
-* Dashboard.
-* Clientes.
-* Productos.
-* Facturas.
-* Detalle de factura.
-* Botón de emitir.
-* Botón de descargar PDF.
-* Botón de registrar pago.
-* Botón de descargar comprobante.
-
-No tiene que ser perfecto, pero sí demostrar el flujo.
+Pendiente de pulir: una sección de contabilidad independiente (hoy los asientos solo se ven dentro del detalle de cada factura) y mejorar la gestión de mensajes de error/aviso en la interfaz.
 
 ---
 
@@ -344,12 +338,12 @@ Esto daría una visión de producto.
 
 ---
 
-### 5.4. Mejorar diseño visual de PDFs
+### 5.4. Mejorar diseño visual de PDFs — parcialmente hecho
 
-Los PDFs funcionan, pero se podrían mejorar con:
+Ya se añadió soporte de **logo de empresa** (`utils/pdf-logo.ts`) y se centralizó el estilo tipográfico (`utils/pdf-style.ts`) para que factura y comprobante sean coherentes.
 
-* Logo de empresa.
-* Mejor maquetación.
+Sigue pendiente:
+
 * Colores corporativos.
 * Numeración de página.
 * Pie legal.
@@ -405,60 +399,52 @@ La clave es defenderlo como un MVP avanzado y extensible.
 
 ## 8. Prioridad de próximos pasos
 
-Orden recomendado:
+Esta sección sí está actualizada a 15/06/2026. La mayoría de lo que antes era "Prioridad 1" ya está hecho (README, `.env.example`, seed, tests mínimos, frontend, gestión de usuarios). Lo que queda:
 
 ### Prioridad 1
 
 ```txt
-README sólido
-.env.example
-Seed inicial
-Tests mínimos
-Validación de asientos cuadrados
+Validación de asientos cuadrados (debe = haber) antes de guardarlos
+Documentación de modelo de datos al día (hecho en docs/base-datos.md)
+Guía de instalación paso a paso
 ```
 
 ### Prioridad 2
 
 ```txt
 Swagger/OpenAPI
-Documentación de arquitectura
-Documentación de modelo de datos
-Frontend mínimo
+Documentación de arquitectura con diagramas de flujo
+Sección de contabilidad en el frontend
+Permisos reales por rol (MANAGER/VIEWER) en el resto de módulos
 ```
 
 ### Prioridad 3
 
 ```txt
-Dashboard
-Mejor diseño PDF
 Facturas rectificativas
 Asientos manuales
-Libro diario/mayor
+Libro diario/mayor, balance de sumas y saldos
+Control automático de facturas vencidas (OVERDUE)
+Mejoras visuales adicionales de PDF (numeración de página, pie legal, datos bancarios)
 ```
 
 ---
 
 ## 9. Conclusión
 
-BenxCore tiene una base backend muy potente para un TFG.
+BenxCore tiene una base sólida para un TFG, y a 15/06/2026 ya no es solo "una base backend potente": es un sistema completo de extremo a extremo.
 
 El sistema ya demuestra:
 
 * Modelado de dominio.
 * Arquitectura modular.
-* Seguridad básica.
+* Seguridad básica y gestión de usuarios con roles.
 * Persistencia relacional.
 * Reglas de negocio.
 * Ciclo de vida de facturas.
 * Automatización contable.
 * Generación documental.
+* Frontend funcional para demostrar todo lo anterior.
+* Tests automáticos de los flujos críticos.
 
-Lo imprescindible ahora no es añadir muchas más funcionalidades, sino consolidar:
-
-* Documentación.
-* Tests.
-* Instalación reproducible.
-* Demo clara.
-* Frontend mínimo.
-
-Con eso, el proyecto puede quedar muy sólido para presentación y defensa.
+Lo que queda ya no es "imprescindible para defender el proyecto", sino mejoras que lo acercan más a un ERP real: validación formal de asientos cuadrados, permisos por rol en todos los módulos, facturas rectificativas, libro diario/mayor y Swagger. Son buenas líneas de trabajo futuro para la memoria, pero ninguna bloquea ya una demo o una defensa.

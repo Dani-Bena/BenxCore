@@ -2,156 +2,62 @@
 
 ## 1. Objetivo del módulo
 
-El módulo de contabilidad de BenxCore tiene como objetivo registrar automáticamente los efectos contables derivados de la facturación y los cobros.
+La idea de este módulo no es construir un programa de contabilidad completo — eso sería un proyecto en sí mismo — sino que las operaciones comerciales del ERP (emitir una factura, cobrar un pago) dejen también su huella contable, de forma automática y coherente. Es decir: que facturación y contabilidad no sean dos mundos separados.
 
-No se plantea inicialmente como un sistema contable completo, sino como una base profesional para conectar las operaciones comerciales del ERP con una estructura contable coherente.
-
-El módulo permite:
+Con lo que hay ahora se puede:
 
 * Crear cuentas contables por empresa.
 * Generar asientos automáticos al emitir facturas.
 * Generar asientos automáticos al registrar pagos.
-* Consultar cuentas contables.
-* Consultar asientos contables.
-* Consultar las líneas de debe y haber de cada asiento.
+* Consultar cuentas y asientos, con sus líneas de debe y haber.
 
----
+## 2. Enfoque: partida doble
 
-## 2. Enfoque general
-
-BenxCore usa una contabilidad basada en asientos de partida doble.
-
-Cada asiento contable se compone de:
-
-* Una cabecera: `JournalEntry`.
-* Varias líneas contables: `JournalLine`.
-* Una cuenta asociada a cada línea: `AccountingAccount`.
-
-La regla básica es:
+BenxCore usa contabilidad por partida doble de toda la vida: cada operación genera un asiento (`JournalEntry`) compuesto por varias líneas (`JournalLine`), y cada línea apunta a una cuenta (`AccountingAccount`). La regla de oro, como en cualquier contabilidad, es:
 
 ```txt
 Total Debe = Total Haber
 ```
 
-Cada operación relevante debe generar un asiento equilibrado.
+Cada asiento que genera el sistema debe cumplir esto. De momento se cumple porque los asientos se construyen "a mano" en el código siguiendo fórmulas conocidas (ver más abajo), pero todavía no hay una comprobación explícita que lo verifique antes de guardar — lo dejo anotado en la sección de pendientes.
 
----
-
-## 3. Entidades principales
+## 3. Entidades
 
 ### AccountingAccount
 
-Representa una cuenta contable.
-
-Campos principales:
-
-* `id`
-* `code`
-* `name`
-* `type`
-* `active`
-* `companyId`
-
-Tipos posibles:
-
-* `ASSET`
-* `LIABILITY`
-* `EQUITY`
-* `INCOME`
-* `EXPENSE`
-
-Ejemplos:
+Una cuenta contable: `id`, `code`, `name`, `type` (`ASSET`, `LIABILITY`, `EQUITY`, `INCOME`, `EXPENSE`), `active`, `companyId`. Algunos ejemplos que usa el sistema:
 
 | Código | Nombre                            | Tipo        |
-| ------ | --------------------------------- | ----------- |
+| ------ | ----------------------------------- | ----------- |
 | `430`  | Clientes                          | `ASSET`     |
 | `572`  | Bancos                            | `ASSET`     |
 | `477`  | Hacienda Pública, IVA repercutido | `LIABILITY` |
 | `700`  | Ventas de productos               | `INCOME`    |
 | `705`  | Prestaciones de servicios         | `INCOME`    |
 
----
-
 ### JournalEntry
 
-Representa la cabecera de un asiento contable.
+La cabecera de un asiento: `id`, `entryNumber`, `entryDate`, `description`, `source`, `companyId`, y opcionalmente `invoiceId` / `paymentId` según de dónde venga.
 
-Campos principales:
-
-* `id`
-* `entryNumber`
-* `entryDate`
-* `description`
-* `source`
-* `companyId`
-* `invoiceId`
-* `paymentId`
-
-Fuentes posibles:
-
-* `INVOICE`
-* `PAYMENT`
-* `MANUAL`
-
-Actualmente BenxCore genera asientos automáticos con source:
-
-* `INVOICE`, cuando se emite una factura.
-* `PAYMENT`, cuando se registra un cobro.
-
-Los asientos manuales quedan preparados para una fase futura.
-
----
+`source` puede ser `INVOICE`, `PAYMENT` o `MANUAL`. Hoy en día el sistema solo genera `INVOICE` (al emitir) y `PAYMENT` (al cobrar) — `MANUAL` está en el modelo pensando en que en algún momento se pueda dar de alta un asiento a mano, pero no hay endpoint para ello todavía.
 
 ### JournalLine
 
-Representa una línea del asiento contable.
-
-Campos principales:
-
-* `id`
-* `description`
-* `debit`
-* `credit`
-* `journalEntryId`
-* `accountId`
-
-Cada línea pertenece a un asiento y referencia una cuenta contable.
-
-Ejemplo:
+Una línea del asiento: `id`, `description`, `debit`, `credit`, `journalEntryId`, `accountId`. Ejemplo de cómo quedan las líneas de un asiento de emisión:
 
 | Cuenta | Descripción                  |    Debe |   Haber |
-| ------ | ---------------------------- | ------: | ------: |
+| ------ | -------------------------------- | ------: | ------: |
 | `430`  | Cliente por factura emitida  | 1306.80 |    0.00 |
 | `705`  | Ingresos por factura emitida |    0.00 | 1080.00 |
 | `477`  | IVA repercutido              |    0.00 |  226.80 |
 
----
+## 4. Cuentas que se crean solas
 
-## 4. Cuentas contables creadas por defecto
+La primera vez que el sistema necesita generar un asiento para una empresa, comprueba que existan las cuentas básicas (`430`, `572`, `477`, `700`, `705`) y, si no existen, las crea (`upsert`, así que si ya existían simplemente se actualizan). De esta forma una empresa nueva puede empezar a facturar sin que nadie tenga que configurar un plan contable mínimo a mano.
 
-Cuando BenxCore necesita generar un asiento automático, asegura primero que existen las cuentas contables básicas de la empresa.
+## 5. Asiento al emitir una factura
 
-Cuentas iniciales:
-
-| Código | Nombre                            | Uso                             |
-| ------ | --------------------------------- | ------------------------------- |
-| `430`  | Clientes                          | Deuda pendiente del cliente.    |
-| `572`  | Bancos                            | Entrada de dinero por cobro.    |
-| `477`  | Hacienda Pública, IVA repercutido | IVA de facturas emitidas.       |
-| `700`  | Ventas de productos               | Ingresos por productos físicos. |
-| `705`  | Prestaciones de servicios         | Ingresos por servicios.         |
-
-Estas cuentas se crean mediante `upsert`, por lo que si ya existen se actualizan y si no existen se crean.
-
----
-
-## 5. Asiento automático por emisión de factura
-
-Cuando una factura pasa de `DRAFT` a `ISSUED`, BenxCore genera automáticamente un asiento contable de emisión.
-
-### Regla contable
-
-Al emitir una factura:
+Cuando una factura pasa de `DRAFT` a `ISSUED`, se genera automáticamente:
 
 ```txt
 Debe:
@@ -162,85 +68,44 @@ Haber:
 477 IVA repercutido .................. cuota IVA
 ```
 
-### Ejemplo
-
-Factura emitida:
-
-```txt
-Subtotal: 1080.00
-IVA 21%: 226.80
-Total: 1306.80
-```
-
-Asiento generado:
+Por ejemplo, para una factura con subtotal 1080.00 € e IVA al 21% (226.80 €), total 1306.80 €:
 
 | Cuenta | Descripción                  |    Debe |   Haber |
-| ------ | ---------------------------- | ------: | ------: |
+| ------ | -------------------------------- | ------: | ------: |
 | `430`  | Cliente por factura emitida  | 1306.80 |    0.00 |
 | `705`  | Ingresos por factura emitida |    0.00 | 1080.00 |
 | `477`  | IVA repercutido              |    0.00 |  226.80 |
 
-El asiento queda vinculado a la factura mediante `invoiceId`.
+El asiento queda enlazado a la factura mediante `invoiceId`.
 
----
-
-## 6. Selección de cuenta de ingresos
-
-BenxCore selecciona automáticamente la cuenta de ingresos según el tipo de producto o servicio.
-
-Regla:
+## 6. Qué cuenta de ingresos se usa
 
 ```txt
 Producto físico → 700 Ventas de productos
 Servicio        → 705 Prestaciones de servicios
 ```
 
-Además, el modelo permite que un producto tenga una cuenta de ingresos específica mediante:
+Esa es la regla por defecto, pero un producto puede tener su propia cuenta de ingresos (`revenueAccountId`). Si la tiene, se usa esa; si no, se aplica la regla anterior según `type`.
 
-```txt
-revenueAccountId
-```
-
-Si el producto tiene `revenueAccountId`, se usa esa cuenta.
-
-Si no la tiene, se usa la cuenta por defecto:
-
-* `700` para productos.
-* `705` para servicios.
-
----
-
-## 7. Agrupación de ingresos
-
-Las líneas de factura se agrupan por cuenta contable de ingresos.
-
-Esto permite que una misma factura tenga varias líneas asociadas a distintas cuentas.
-
-Ejemplo:
+Esto importa sobre todo cuando una misma factura mezcla productos y servicios: las líneas se agrupan por cuenta de ingresos, así que el asiento puede tener varias líneas de "Haber" en vez de una sola. Por ejemplo:
 
 | Línea      | Tipo     | Cuenta |   Base |
 | ---------- | -------- | ------ | -----: |
 | Producto A | Producto | `700`  | 500.00 |
 | Servicio B | Servicio | `705`  | 800.00 |
 
-Asiento:
+genera:
 
 | Cuenta                          |    Debe |  Haber |
-| ------------------------------- | ------: | -----: |
+| ---------------------------------- | ------: | -----: |
 | `430` Clientes                  | 1573.00 |   0.00 |
 | `700` Ventas de productos       |    0.00 | 500.00 |
 | `705` Prestaciones de servicios |    0.00 | 800.00 |
 | `477` IVA repercutido           |    0.00 | 273.00 |
 
----
+## 7. Asiento al cobrar una factura
 
-## 8. Asiento automático por cobro de factura
-
-Cuando se registra un pago sobre una factura emitida, BenxCore genera automáticamente un asiento de cobro.
-
-### Regla contable
-
-Al cobrar una factura:
+Cada vez que se registra un pago sobre una factura emitida:
 
 ```txt
 Debe:
@@ -250,172 +115,55 @@ Haber:
 430 Clientes ......................... importe cobrado
 ```
 
-### Ejemplo
-
-Pago parcial:
-
-```txt
-Importe cobrado: 500.00
-```
-
-Asiento generado:
+Por ejemplo, un pago parcial de 500 €:
 
 | Cuenta | Descripción                           |   Debe |  Haber |
-| ------ | ------------------------------------- | -----: | -----: |
+| ------ | ----------------------------------------- | -----: | -----: |
 | `572`  | Entrada en banco por cobro de factura | 500.00 |   0.00 |
 | `430`  | Cancelación de deuda de cliente       |   0.00 | 500.00 |
 
-El asiento queda vinculado a:
+Este asiento queda enlazado tanto a la factura (`invoiceId`) como al pago concreto (`paymentId`). Si una factura recibe dos pagos (uno parcial y otro final), se generan dos asientos `PAYMENT` independientes, uno por cada cobro — tiene sentido, porque son dos movimientos bancarios distintos y cada uno debe poder rastrearse por separado.
 
-* La factura mediante `invoiceId`.
-* El pago mediante `paymentId`.
-
----
-
-## 9. Relación con estados de factura
-
-Los asientos contables están integrados con el ciclo de vida de facturación.
-
-### Emisión
+## 8. Cómo se engancha todo con el estado de la factura
 
 ```txt
-DRAFT → ISSUED
+DRAFT → ISSUED                  → genera JournalEntry source = INVOICE
+ISSUED → PARTIALLY_PAID          → genera JournalEntry source = PAYMENT
+PARTIALLY_PAID → PAID            → genera otro JournalEntry source = PAYMENT
 ```
 
-Genera:
+## 9. Un par de decisiones que merece la pena explicar
 
-```txt
-JournalEntry source = INVOICE
-```
+**Los asientos se crean en la misma transacción que la operación que los origina.** Emitir una factura y crear su asiento de emisión ocurre como una sola operación atómica; lo mismo con registrar un pago y su asiento de cobro. La alternativa (crear primero la factura y el asiento después, por separado) abriría la puerta a que algo falle a medias y queden facturas emitidas sin asiento, o pagos sin su contrapartida contable. Con la transacción, o se hace todo o no se hace nada.
 
-### Pago parcial
+**Los asientos son de solo lectura desde la API.** Se pueden consultar (cabecera, líneas, cuenta de cada línea, factura/pago relacionado) pero no editar ni borrar. Tiene sentido: si se pudiera editar un asiento ya generado, perdería bastante el sentido tener trazabilidad automática.
 
-```txt
-ISSUED → PARTIALLY_PAID
-```
-
-Genera:
-
-```txt
-JournalEntry source = PAYMENT
-```
-
-### Pago final
-
-```txt
-PARTIALLY_PAID → PAID
-```
-
-Genera otro asiento:
-
-```txt
-JournalEntry source = PAYMENT
-```
-
-Cada cobro genera su propio asiento independiente.
-
----
-
-## 10. Reglas implementadas
-
-### 10.1. Los asientos se generan dentro de transacciones
-
-Los asientos se crean dentro de la misma transacción que la operación principal.
-
-Ejemplos:
-
-* Emitir factura y crear asiento de emisión.
-* Registrar pago y crear asiento de cobro.
-
-Esto evita inconsistencias como:
-
-```txt
-Factura emitida sin asiento
-Pago registrado sin asiento
-```
-
----
-
-### 10.2. Las cuentas se crean automáticamente
-
-Antes de generar un asiento, el sistema asegura que existen las cuentas contables básicas de la empresa.
-
-Esto permite que una empresa nueva pueda emitir facturas sin configurar manualmente el plan contable mínimo.
-
----
-
-### 10.3. Los asientos son consultables
-
-Los asientos quedan almacenados y pueden consultarse desde la API.
-
-Incluyen:
-
-* Cabecera del asiento.
-* Factura relacionada.
-* Pago relacionado, si existe.
-* Líneas del asiento.
-* Cuenta contable de cada línea.
-
----
-
-### 10.4. No se crean asientos manuales todavía
-
-La versión actual permite consultar asientos y generar asientos automáticos.
-
-La creación de asientos manuales se deja para una fase futura.
-
----
-
-## 11. Endpoints de contabilidad
-
-### Consultar cuentas contables
+## 10. Endpoints
 
 ```txt
 GET /api/accounting/accounts
-```
-
-Devuelve las cuentas activas de la empresa autenticada.
-
-Filtro opcional:
-
-```txt
 GET /api/accounting/accounts?includeInactive=true
 ```
 
----
-
-### Consultar asientos contables
+Cuentas contables de la empresa autenticada.
 
 ```txt
 GET /api/accounting/journal-entries
-```
-
-Devuelve los asientos de la empresa autenticada.
-
-Filtros opcionales:
-
-```txt
 GET /api/accounting/journal-entries?source=INVOICE
 GET /api/accounting/journal-entries?source=PAYMENT
 GET /api/accounting/journal-entries?source=MANUAL
 GET /api/accounting/journal-entries?dateFrom=2026-06-01&dateTo=2026-06-30
 ```
 
----
-
-### Consultar asiento concreto
+Asientos de la empresa autenticada, con filtros opcionales por origen y rango de fechas.
 
 ```txt
 GET /api/accounting/journal-entries/:id
 ```
 
-Devuelve un asiento concreto con sus líneas y cuentas asociadas.
+Un asiento concreto con sus líneas y las cuentas asociadas.
 
----
-
-## 12. Ejemplo de respuesta de asiento
-
-Ejemplo simplificado:
+## 11. Ejemplo de respuesta
 
 ```json
 {
@@ -435,121 +183,46 @@ Ejemplo simplificado:
         "description": "Cliente por factura emitida",
         "debit": "1306.80",
         "credit": "0.00",
-        "account": {
-          "code": "430",
-          "name": "Clientes"
-        }
+        "account": { "code": "430", "name": "Clientes" }
       },
       {
         "description": "Ingresos por factura emitida",
         "debit": "0.00",
         "credit": "1080.00",
-        "account": {
-          "code": "705",
-          "name": "Prestaciones de servicios"
-        }
+        "account": { "code": "705", "name": "Prestaciones de servicios" }
       },
       {
         "description": "IVA repercutido",
         "debit": "0.00",
         "credit": "226.80",
-        "account": {
-          "code": "477",
-          "name": "Hacienda Pública, IVA repercutido"
-        }
+        "account": { "code": "477", "name": "Hacienda Pública, IVA repercutido" }
       }
     ]
   }
 }
 ```
 
----
+## 12. Ejemplo de flujo completo
 
-## 13. Flujo contable implementado
-
-```txt
-Emitir factura
-    ↓
-Crear asiento INVOICE
-    ↓
-Registrar pago parcial
-    ↓
-Crear asiento PAYMENT
-    ↓
-Registrar pago final
-    ↓
-Crear asiento PAYMENT
-```
-
-Ejemplo:
+Para una factura F2026-000002 con total 1306.80 (subtotal 1080.00 + IVA 226.80):
 
 ```txt
-Factura F2026-000002 total 1306.80
+Emisión:
+  Debe 430 Clientes = 1306.80
+  Haber 705 Prestaciones de servicios = 1080.00
+  Haber 477 IVA repercutido = 226.80
 
-Asiento de emisión:
-Debe 430 = 1306.80
-Haber 705 = 1080.00
-Haber 477 = 226.80
+Pago parcial de 500:
+  Debe 572 Bancos = 500.00
+  Haber 430 Clientes = 500.00
 
-Pago parcial 500:
-Debe 572 = 500.00
-Haber 430 = 500.00
-
-Pago final 806.80:
-Debe 572 = 806.80
-Haber 430 = 806.80
+Pago final de 806.80:
+  Debe 572 Bancos = 806.80
+  Haber 430 Clientes = 806.80
 ```
 
----
+## 13. Lo que falta
 
-## 14. Limitaciones actuales
+Lo más importante que tengo pendiente aquí es añadir una **validación explícita de que `totalDebe = totalHaber`** antes de persistir cualquier asiento. Ahora mismo se cumple porque las fórmulas que generan los asientos están bien, pero no hay nada que lo compruebe — y conceptualmente es la pieza que le da sentido a "partida doble".
 
-La versión actual todavía no implementa:
-
-* Asientos manuales.
-* Periodos contables.
-* Cierre contable.
-* Conciliación bancaria.
-* Remesas.
-* Modelos fiscales.
-* Exportación contable.
-* Facturas rectificativas con asiento propio.
-* Control de vencimientos automático.
-* Reversión de asientos.
-* Libro diario formal.
-* Libro mayor.
-
----
-
-## 15. Mejoras futuras
-
-Mejoras previstas:
-
-* Endpoint para crear asientos manuales.
-* Validación automática de que cada asiento está cuadrado.
-* Libro diario.
-* Libro mayor por cuenta.
-* Balance de sumas y saldos.
-* Asientos para facturas rectificativas.
-* Asientos para cancelaciones.
-* Exportación CSV/Excel.
-* Integración con módulos fiscales.
-* Panel visual de contabilidad en el frontend.
-
----
-
-## 16. Resumen
-
-El módulo contable de BenxCore conecta la facturación con una base de contabilidad por partida doble.
-
-Actualmente permite:
-
-* Crear cuentas contables base por empresa.
-* Generar asientos al emitir facturas.
-* Generar asientos al registrar cobros.
-* Consultar cuentas.
-* Consultar asientos.
-* Consultar líneas de debe y haber.
-* Mantener la trazabilidad entre factura, pago y asiento.
-
-Este diseño convierte el sistema de facturación en una base más realista para un ERP, ya que las operaciones comerciales no solo modifican facturas y pagos, sino que también generan efectos contables trazables.
+El resto de cosas que faltan (asientos manuales, libro diario, libro mayor, balance de sumas y saldos, periodos contables, exportación...) están descritas con más detalle en `tfg-status-and-roadmap.md`. La idea es presentar este módulo como una base de integración contable sólida, no como un programa de contabilidad certificado — eso queda fuera del alcance de un TFG y conviene decirlo así de claro en la memoria.

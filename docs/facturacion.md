@@ -2,140 +2,58 @@
 
 ## 1. Objetivo del módulo
 
-El módulo de facturación de BenxCore permite gestionar el ciclo de vida completo de una factura desde su creación como borrador hasta su emisión oficial y posterior registro de pagos.
+Este es el módulo central de BenxCore. La idea desde el principio fue no quedarme en un CRUD de facturas (crear, listar, editar, borrar) sino modelar el ciclo de vida real de una factura: nace como borrador, se puede tocar mientras es borrador, y en el momento en que se emite pasa a ser un documento oficial que ya no se puede modificar.
 
-El objetivo no es implementar un CRUD simple de facturas, sino un flujo de negocio controlado, trazable y preparado para escenarios reales de empresa.
+Para que esto funcione, la facturación se apoya en casi todos los módulos anteriores:
 
-La facturación se apoya en los siguientes módulos previos:
-
-* Empresa: datos fiscales del emisor.
-* Clientes: datos fiscales del destinatario.
-* Productos/servicios: conceptos facturables.
-* Series de facturación: numeración correlativa.
-* Pagos: registro de cobros parciales o totales.
-* Auditoría: registro de acciones relevantes.
-
----
+* **Empresa**: aporta los datos fiscales del emisor.
+* **Clientes**: aportan los datos fiscales del destinatario.
+* **Productos/servicios**: son los conceptos que se facturan.
+* **Series de facturación**: dan la numeración correlativa al emitir.
+* **Pagos**: registran los cobros, parciales o totales.
+* **Auditoría**: deja constancia de qué se hizo y cuándo.
 
 ## 2. Entidades principales
 
 ### Invoice
 
-Representa la factura principal.
+Es la factura en sí. Los campos más relevantes son `id`, `type`, `status`, `invoiceNumber`, `issueDate`, `dueDate`, `subtotal`, `taxTotal`, `total`, `amountPaid`, `amountDue`, `notes`, `companyId`, `clientId` e `invoiceSeriesId`.
 
-Campos importantes:
+Lo que no es tan obvio a primera vista es que, en el momento en que la factura se emite, se hace una copia de los datos fiscales del emisor y del cliente directamente dentro de la factura:
 
-* `id`
-* `type`
-* `status`
-* `invoiceNumber`
-* `issueDate`
-* `dueDate`
-* `subtotal`
-* `taxTotal`
-* `total`
-* `amountPaid`
-* `amountDue`
-* `notes`
-* `companyId`
-* `clientId`
-* `invoiceSeriesId`
+* Emisor: `issuerName`, `issuerNif`, `issuerAddress`, `issuerEmail`, `issuerPhone`
+* Cliente: `customerName`, `customerNif`, `customerAddress`, `customerEmail`, `customerPhone`
 
-Además, cuando la factura se emite, guarda una copia de los datos fiscales del emisor y del cliente:
-
-* `issuerName`
-* `issuerNif`
-* `issuerAddress`
-* `issuerEmail`
-* `issuerPhone`
-* `customerName`
-* `customerNif`
-* `customerAddress`
-* `customerEmail`
-* `customerPhone`
-
-Esto evita que una factura histórica cambie si más adelante se modifica la empresa o el cliente.
-
----
+Esto es el "snapshot fiscal", y es una de las decisiones de diseño de las que estoy más contento: si dentro de seis meses cambio la dirección de mi empresa o un cliente actualiza su NIF, las facturas ya emitidas no deben cambiar. Una factura histórica tiene que reflejar la realidad del momento en que se emitió, no la actual.
 
 ### InvoiceLine
 
-Representa una línea de factura.
+Cada línea de una factura. Guarda `lineNumber`, `description`, `unit`, `quantity`, `unitPrice`, `discountRate`, `discountAmount`, `taxRate`, `subtotal`, `taxAmount`, `total` y, opcionalmente, `productId`.
 
-Campos principales:
-
-* `lineNumber`
-* `description`
-* `unit`
-* `quantity`
-* `unitPrice`
-* `discountRate`
-* `discountAmount`
-* `taxRate`
-* `subtotal`
-* `taxAmount`
-* `total`
-* `productId`
-
-La línea puede estar vinculada a un producto o servicio, pero guarda sus propios datos para conservar el histórico.
-
----
+Aunque una línea venga de un producto del catálogo, no se limita a guardar una referencia: copia la descripción, el precio, el IVA, etc. en el momento de crearse. Por el mismo motivo que con el snapshot fiscal: si más adelante cambio el precio de un producto, las facturas ya hechas no deben verse afectadas.
 
 ### InvoiceTaxSummary
 
-Agrupa los impuestos de la factura por tipo impositivo.
-
-Ejemplo:
+Agrupa el total de la factura por tipo de IVA. Por ejemplo, si una factura tiene líneas al 21% y al 10%, esta tabla guarda una fila por cada tipo con su base imponible y su cuota:
 
 | IVA | Base imponible |    Cuota |
 | --- | -------------: | -------: |
 | 21% |      1080.00 € | 226.80 € |
 
-Esto permite representar correctamente facturas con varios tipos de IVA.
-
----
+Sin esto, mostrar el desglose de IVA en el PDF (o en cualquier informe) significaría recalcularlo cada vez recorriendo todas las líneas.
 
 ### InvoiceSeries
 
-Controla la numeración de facturas.
-
-Ejemplo:
-
-* `code`: `FACT-2026`
-* `prefix`: `F2026-`
-* `currentNumber`: `1`
-
-Una factura emitida podría quedar como:
-
-```txt
-F2026-000001
-```
-
----
+Controla la numeración de las facturas emitidas. Tiene `code`, `prefix`, `currentNumber` y `year`. Por ejemplo, con `code = "FACT-2026"`, `prefix = "F2026-"` y `currentNumber = 0`, la primera factura que se emita con esa serie quedará como `F2026-000001` y `currentNumber` pasará a `1`.
 
 ### Payment
 
-Representa un pago asociado a una factura.
+Un pago asociado a una factura: `amount`, `paymentDate`, `method`, `reference`, `notes` e `invoiceId`. Cada vez que se registra un pago, se recalculan automáticamente `amountPaid` y `amountDue` de la factura, y se actualiza su estado si corresponde.
 
-Campos principales:
-
-* `amount`
-* `paymentDate`
-* `method`
-* `reference`
-* `notes`
-* `invoiceId`
-
-Los pagos actualizan automáticamente los importes de la factura.
-
----
-
-## 3. Estados de factura
-
-La factura puede tener los siguientes estados:
+## 3. Estados de una factura
 
 | Estado           | Descripción                                                |
-| ---------------- | ---------------------------------------------------------- |
+| ---------------- | ----------------------------------------------------------- |
 | `DRAFT`          | Borrador editable. Todavía no tiene número oficial.        |
 | `ISSUED`         | Factura emitida. Tiene número oficial y queda bloqueada.   |
 | `PARTIALLY_PAID` | Factura emitida con pagos parciales.                       |
@@ -143,188 +61,95 @@ La factura puede tener los siguientes estados:
 | `OVERDUE`        | Factura vencida. Pendiente de implementar automáticamente. |
 | `CANCELLED`      | Factura cancelada. No se elimina físicamente.              |
 
----
-
 ## 4. Ciclo de vida de una factura
 
 ### 4.1. Creación del borrador
 
-Una factura se crea inicialmente como `DRAFT`.
-
-En este estado:
-
-* No tiene número oficial.
-* No tiene fecha de emisión.
-* Puede editarse.
-* Puede modificarse el cliente.
-* Pueden modificarse las líneas.
-* Se recalculan importes automáticamente.
-
----
+Una factura nace siempre como `DRAFT`. En este estado no tiene número oficial ni fecha de emisión, y se puede editar libremente: cambiar el cliente, añadir o quitar líneas, modificar cantidades o descuentos... Cada cambio recalcula automáticamente subtotales, IVA y totales, así que nunca hay que actualizarlos "a mano".
 
 ### 4.2. Emisión de factura
 
-Al emitir una factura:
+Emitir una factura (`POST /api/invoices/:id/issue`) es el paso que la convierte en un documento oficial, y por eso tiene varias comprobaciones antes de dejarlo pasar:
 
-* Debe estar en estado `DRAFT`.
-* Debe ser de tipo `STANDARD`.
-* Debe tener una serie activa.
-* Debe tener un cliente activo.
-* Debe tener al menos una línea.
-* La empresa debe tener datos fiscales completos.
-* El cliente debe tener datos fiscales completos.
+* La factura tiene que estar en `DRAFT`.
+* Tiene que ser de tipo `STANDARD` (las rectificativas todavía no tienen flujo propio, ver más abajo).
+* Necesita una serie activa.
+* El cliente tiene que estar activo.
+* Tiene que tener al menos una línea.
+* Tanto la empresa como el cliente deben tener los datos fiscales mínimos completos.
 
-Durante la emisión:
-
-1. Se incrementa el contador de la serie.
-2. Se genera el número de factura.
-3. Se asigna fecha de emisión.
-4. Se copian los datos fiscales de empresa y cliente.
-5. La factura pasa a estado `ISSUED`.
-6. Se registra la acción en auditoría.
-
----
+Si todo eso se cumple, en una misma operación: se incrementa el contador de la serie, se genera el número de factura, se asigna la fecha de emisión, se copian los datos fiscales (el snapshot del que hablaba antes), la factura pasa a `ISSUED` y queda registrada en auditoría. Además, esto dispara la generación del asiento contable correspondiente — ese detalle está en `contabilidad.md`.
 
 ### 4.3. Registro de pagos
 
-Una factura emitida puede recibir pagos.
+Una vez emitida, la factura puede recibir pagos. Las reglas son bastante directas, pero importantes:
 
-Reglas:
+* No se puede pagar una factura en `DRAFT` (todavía no es un documento oficial).
+* No se puede pagar una factura `CANCELLED`.
+* No se puede pagar una factura que ya está `PAID`.
+* No se puede pagar más del importe pendiente (`amountDue`).
 
-* No se pueden pagar facturas `DRAFT`.
-* No se pueden pagar facturas `CANCELLED`.
-* No se pueden pagar facturas ya `PAID`.
-* No se permite pagar más del importe pendiente.
-* Cada pago se guarda como entidad `Payment`.
-* La factura actualiza `amountPaid` y `amountDue`.
-
-Estados derivados:
+Cada pago se guarda como un registro `Payment` independiente, y la factura actualiza `amountPaid` y `amountDue`. El estado se deriva automáticamente:
 
 ```txt
-ISSUED + pago parcial → PARTIALLY_PAID
-PARTIALLY_PAID + pago final → PAID
+ISSUED + pago parcial         → PARTIALLY_PAID
+PARTIALLY_PAID + pago final   → PAID
 ```
-
----
 
 ## 5. Cálculos
 
-### 5.1. Cálculo de línea
-
-Para cada línea:
+### 5.1. Por línea
 
 ```txt
-grossAmount = quantity × unitPrice
-discountAmount = grossAmount × discountRate / 100
-subtotal = grossAmount - discountAmount
-taxAmount = subtotal × taxRate / 100
-total = subtotal + taxAmount
+grossAmount      = quantity × unitPrice
+discountAmount   = grossAmount × discountRate / 100
+subtotal         = grossAmount - discountAmount
+taxAmount        = subtotal × taxRate / 100
+total            = subtotal + taxAmount
 ```
 
-Ejemplo:
+Ejemplo con 1 unidad a 1200 €, 10% de descuento y 21% de IVA:
 
 ```txt
-quantity = 1
-unitPrice = 1200
-discountRate = 10%
-taxRate = 21%
-
-grossAmount = 1200
+grossAmount    = 1200
 discountAmount = 120
-subtotal = 1080
-taxAmount = 226.80
-total = 1306.80
+subtotal       = 1080
+taxAmount      = 226.80
+total          = 1306.80
 ```
 
----
+### 5.2. Por factura
 
-### 5.2. Cálculo de factura
-
-La factura suma todas sus líneas:
+La factura simplemente suma sus líneas:
 
 ```txt
-subtotal = suma de subtotales de línea
-taxTotal = suma de cuotas de IVA
-total = subtotal + taxTotal
+subtotal   = suma de subtotales de línea
+taxTotal   = suma de cuotas de IVA
+total      = subtotal + taxTotal
 amountPaid = suma de pagos registrados
-amountDue = total - amountPaid
+amountDue  = total - amountPaid
 ```
 
----
+Todos estos importes son `Decimal` en la base de datos (no `float`), precisamente para que estos cálculos no acumulen errores de redondeo.
 
-## 6. Reglas profesionales implementadas
+## 6. Reglas de negocio que me parecía importante dejar claras
 
-### 6.1. No se editan facturas emitidas
+**Una factura emitida no se edita.** `PUT /api/invoices/:id` solo funciona si la factura está en `DRAFT`. Si está `ISSUED`, `PARTIALLY_PAID` o `PAID`, la petición se rechaza. Es la consecuencia directa de que una factura emitida es un documento fiscal: no tiene sentido que cambie después de entregarse al cliente.
 
-Solo las facturas en estado `DRAFT` pueden actualizarse desde el endpoint normal de edición.
+**Las facturas no se borran.** `DELETE /api/invoices/:id` no hace un `DELETE` real. Para un borrador, cambia su estado a `CANCELLED`. El registro sigue existiendo (por trazabilidad y porque podría tener referencias), simplemente deja de ser una factura "activa".
 
-Si una factura está `ISSUED`, `PARTIALLY_PAID` o `PAID`, no se permite modificarla con `PUT /api/invoices/:id`.
+**Snapshot fiscal al emitir.** Ya lo comenté en la sección de entidades, pero merece la pena repetirlo aquí como regla: al emitir se copian los datos de empresa y cliente dentro de la factura, así que cambios posteriores en `Company` o `Client` no afectan a facturas ya emitidas.
 
----
+**Numeración por series.** El número de factura no es un autoincremental genérico de la base de datos, sino que depende de la serie elegida (`FACT-2026` → `F2026-000001`, `F2026-000002`, ...). Cada serie lleva su propio contador (`currentNumber`).
 
-### 6.2. No se borran facturas
+**Todo lo importante queda auditado.** Crear una factura, actualizar un borrador, cancelarlo, emitir y registrar pagos generan entradas en `AuditLog`.
 
-El endpoint `DELETE /api/invoices/:id` no elimina físicamente la factura.
-
-Para borradores, la operación cambia el estado a:
-
-```txt
-CANCELLED
-```
-
----
-
-### 6.3. Snapshot fiscal
-
-Al emitir una factura, se copian los datos fiscales de empresa y cliente.
-
-Esto garantiza que una factura histórica conserva los datos originales aunque después se modifique el cliente o la empresa.
-
----
-
-### 6.4. Numeración mediante series
-
-Las facturas oficiales se numeran con una serie.
-
-Ejemplo:
-
-```txt
-Serie: FACT-2026
-Prefijo: F2026-
-currentNumber: 0
-
-Factura emitida:
-F2026-000001
-```
-
-Después de emitir:
-
-```txt
-currentNumber = 1
-```
-
----
-
-### 6.5. Auditoría
-
-Las acciones importantes generan registros en `AuditLog`.
-
-Acciones auditadas:
-
-* Creación de factura.
-* Actualización de borrador.
-* Cancelación de borrador.
-* Emisión de factura.
-* Registro de pagos.
-
----
-
-## 7. Endpoints de facturación
+## 7. Endpoints
 
 ### Facturas
 
 | Método   | Endpoint                  | Descripción                                    |
-| -------- | ------------------------- | ---------------------------------------------- |
+| -------- | ------------------------- | ------------------------------------------------ |
 | `GET`    | `/api/invoices`           | Lista facturas de la empresa autenticada.      |
 | `GET`    | `/api/invoices/:id`       | Obtiene una factura concreta.                  |
 | `POST`   | `/api/invoices`           | Crea una factura en borrador.                  |
@@ -332,34 +157,30 @@ Acciones auditadas:
 | `DELETE` | `/api/invoices/:id`       | Cancela una factura en borrador.               |
 | `POST`   | `/api/invoices/:id/issue` | Emite oficialmente una factura.                |
 
----
-
 ### Pagos de factura
 
 | Método | Endpoint                     | Descripción                                |
-| ------ | ---------------------------- | ------------------------------------------ |
+| ------ | ----------------------------- | ---------------------------------------------- |
 | `GET`  | `/api/invoices/:id/payments` | Lista los pagos de una factura.            |
 | `POST` | `/api/invoices/:id/payments` | Registra un pago para una factura emitida. |
-
----
 
 ### Series de facturación
 
 | Método   | Endpoint                  | Descripción                 |
-| -------- | ------------------------- | --------------------------- |
+| -------- | --------------------------- | ------------------------------ |
 | `GET`    | `/api/invoice-series`     | Lista series activas.       |
 | `GET`    | `/api/invoice-series/:id` | Obtiene una serie concreta. |
 | `POST`   | `/api/invoice-series`     | Crea una nueva serie.       |
 | `PUT`    | `/api/invoice-series/:id` | Actualiza una serie.        |
 | `DELETE` | `/api/invoice-series/:id` | Desactiva una serie.        |
 
----
+## 8. Ejemplo de uso de principio a fin
 
-## 8. Ejemplos de uso
-
-### Crear factura en borrador
+Crear una factura en borrador:
 
 ```json
+POST /api/invoices
+
 {
   "clientId": 2,
   "invoiceSeriesId": 1,
@@ -380,38 +201,21 @@ Acciones auditadas:
 }
 ```
 
-Resultado esperado:
+El sistema responde con `status = DRAFT`, `subtotal = 1080.00`, `taxTotal = 226.80`, `total = 1306.80`, `amountPaid = 0.00` y `amountDue = 1306.80`.
 
-```txt
-status = DRAFT
-subtotal = 1080.00
-taxTotal = 226.80
-total = 1306.80
-amountPaid = 0.00
-amountDue = 1306.80
-```
-
----
-
-### Emitir factura
+Emitir la factura:
 
 ```txt
 POST /api/invoices/1/issue
 ```
 
-Resultado esperado:
+Resultado: `status = ISSUED`, `invoiceNumber = F2026-000001`, `issueDate` = fecha actual.
 
-```txt
-status = ISSUED
-invoiceNumber = F2026-000001
-issueDate = fecha actual
-```
-
----
-
-### Registrar pago parcial
+Registrar un pago parcial:
 
 ```json
+POST /api/invoices/1/payments
+
 {
   "amount": "500",
   "method": "BANK_TRANSFER",
@@ -420,19 +224,13 @@ issueDate = fecha actual
 }
 ```
 
-Resultado esperado:
+Resultado: `status = PARTIALLY_PAID`, `amountPaid = 500.00`, `amountDue = total - 500.00`.
 
-```txt
-status = PARTIALLY_PAID
-amountPaid = 500.00
-amountDue = total - 500.00
-```
-
----
-
-### Registrar pago final
+Y el pago final:
 
 ```json
+POST /api/invoices/1/payments
+
 {
   "amount": "806.80",
   "method": "BANK_TRANSFER",
@@ -441,47 +239,22 @@ amountDue = total - 500.00
 }
 ```
 
-Resultado esperado:
+Resultado: `status = PAID`, `amountPaid = total`, `amountDue = 0.00`.
+
+En resumen, el recorrido completo es:
 
 ```txt
-status = PAID
-amountPaid = total
-amountDue = 0.00
-```
+Crear borrador → Actualizar borrador → Emitir factura → Pago parcial → Pago final
 
----
-
-## 9. Flujo completo implementado
-
-```txt
-Crear borrador
-    ↓
-Actualizar borrador
-    ↓
-Emitir factura
-    ↓
-Registrar pago parcial
-    ↓
-Registrar pago final
-```
-
-Estados:
-
-```txt
 DRAFT → ISSUED → PARTIALLY_PAID → PAID
 ```
 
----
+## 9. Lo que falta por implementar
 
-## 10. Mejoras futuras
+El modelo ya está preparado para algunas cosas que todavía no tienen flujo:
 
-El módulo queda preparado para ampliar con:
+* **Facturas rectificativas**: el tipo `CORRECTIVE` y el campo `rectifiesInvoiceId` existen en el esquema, pero el endpoint para generarlas a partir de una factura emitida no está hecho.
+* **Estado `OVERDUE`**: existe como valor del enum, pero nada lo cambia automáticamente cuando se pasa la fecha de vencimiento.
+* **Envío de la factura por email** al cliente tras emitirla.
 
-* Generación de PDF.
-* Envío de factura por email.
-* Facturas rectificativas.
-* Asientos contables automáticos.
-* Exportación contable.
-* Control automático de facturas vencidas.
-* Factura electrónica.
-* Adjuntos documentales.
+El resto de ideas de ampliación (asientos manuales, libro diario/mayor, etc.) están recogidas con más contexto en `tfg-status-and-roadmap.md`, para no duplicar la lista aquí.

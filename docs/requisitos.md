@@ -1,5 +1,7 @@
 # Requisitos de BenxCore
 
+> Este fue el planteamiento inicial del proyecto, antes de empezar a implementarlo. Lo dejo tal cual porque sirve para ver de dónde se partió. El alcance final terminó siendo más amplio: se añadieron gestión de usuarios y roles, contabilidad automática por partida doble, comprobantes de pago y un módulo de auditoría que no estaban previstos al principio. El estado real y actualizado del proyecto está en `tfg-status-and-roadmap.md` y `tareas.md`.
+
 ## Objetivo general
 
 Desarrollar una aplicación web tipo ERP para pequeñas empresas y autónomos, permitiendo gestionar clientes, productos, servicios y facturas.
