@@ -85,10 +85,17 @@ export async function createClient(
   }
 
   return prisma.$transaction(async (tx) => {
+    const lastClient = await tx.client.findFirst({
+      where: { companyId },
+      orderBy: { number: "desc" },
+      select: { number: true },
+    });
+
     const createdClient = await tx.client.create({
       data: {
         ...data,
         companyId,
+        number: (lastClient?.number ?? 0) + 1,
       },
     });
 

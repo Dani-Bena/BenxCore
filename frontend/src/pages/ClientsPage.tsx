@@ -169,7 +169,7 @@ export function ClientsPage({ token, notify }: Props) {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Nº</th>
               <th>Nombre</th>
               <th>CIF/NIF</th>
               <th>Email</th>
@@ -180,7 +180,7 @@ export function ClientsPage({ token, notify }: Props) {
           <tbody>
             {clients.map((client) => (
               <tr key={client.id}>
-                <td>{client.id}</td>
+                <td>{client.number}</td>
                 <td>{displayClientName(client)}</td>
                 <td>{client.taxId ?? client.nif ?? "-"}</td>
                 <td>{client.email ?? "-"}</td>

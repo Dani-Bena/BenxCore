@@ -127,7 +127,8 @@ model User {
 }
 
 model Client {
-  id Int @id @default(autoincrement())
+  id     Int @id @default(autoincrement())
+  number Int @default(0)
 
   legalName String     @map("name")
   tradeName String?
@@ -159,13 +160,15 @@ model Client {
 
   invoices Invoice[]
 
+  @@unique([companyId, number])
   @@index([companyId])
   @@index([companyId, active])
   @@index([companyId, taxId])
 }
 
 model Product {
-  id Int @id @default(autoincrement())
+  id     Int @id @default(autoincrement())
+  number Int @default(0)
 
   code        String?
   name        String
@@ -191,6 +194,7 @@ model Product {
   invoiceLines InvoiceLine[]
 
   @@unique([companyId, code])
+  @@unique([companyId, number])
   @@index([companyId])
   @@index([companyId, active])
   @@index([companyId, type])
@@ -198,6 +202,7 @@ model Product {
 
 model InvoiceSeries {
   id            Int      @id @default(autoincrement())
+  number        Int      @default(0)
   code          String
   prefix        String
   currentNumber Int      @default(0)
@@ -212,10 +217,12 @@ model InvoiceSeries {
   invoices Invoice[]
 
   @@unique([companyId, code])
+  @@unique([companyId, number])
 }
 
 model Invoice {
   id     Int           @id @default(autoincrement())
+  number Int           @default(0)
   type   InvoiceType   @default(STANDARD)
   status InvoiceStatus @default(DRAFT)
 
@@ -265,6 +272,7 @@ model Invoice {
   journalEntries JournalEntry[] @relation("InvoiceJournalEntries")
 
   @@unique([companyId, invoiceNumber])
+  @@unique([companyId, number])
 }
 
 model InvoiceLine {

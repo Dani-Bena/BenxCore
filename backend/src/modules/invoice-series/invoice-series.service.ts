@@ -87,10 +87,17 @@ export async function createInvoiceSeries(
   }
 
   return prisma.$transaction(async (tx) => {
+    const lastSeries = await tx.invoiceSeries.findFirst({
+      where: { companyId },
+      orderBy: { number: "desc" },
+      select: { number: true },
+    });
+
     const createdSeries = await tx.invoiceSeries.create({
       data: {
         ...data,
         companyId,
+        number: (lastSeries?.number ?? 0) + 1,
       },
     });
 

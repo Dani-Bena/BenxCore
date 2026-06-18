@@ -173,7 +173,7 @@ export function ProductsPage({ token, notify }: Props) {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Nº</th>
               <th>Código</th>
               <th>Nombre</th>
               <th>Tipo</th>
@@ -186,7 +186,7 @@ export function ProductsPage({ token, notify }: Props) {
           <tbody>
             {products.map((product) => (
               <tr key={product.id}>
-                <td>{product.id}</td>
+                <td>{product.number}</td>
                 <td>{product.code ?? "-"}</td>
                 <td>{product.name}</td>
                 <td>{product.type}</td>

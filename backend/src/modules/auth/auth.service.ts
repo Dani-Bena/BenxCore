@@ -74,6 +74,7 @@ export async function registerUser(data: RegisterInput) {
       },
       invoiceSeries: {
         create: {
+          number: 1,
           code: seriesCode,
           prefix: seriesPrefix,
           currentNumber: 0,

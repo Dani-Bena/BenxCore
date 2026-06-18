@@ -115,6 +115,7 @@ async function main() {
     await prisma.client.create({
       data: {
         companyId,
+        number: 1,
         legalName: "Cliente Demo S.L.",
         tradeName: "Cliente Demo",
         type: "COMPANY",
@@ -157,6 +158,7 @@ async function main() {
     },
     create: {
       companyId,
+      number: 1,
       code: "WEB-001",
       name: "Desarrollo web corporativo",
       description: "Servicio de diseño y desarrollo web corporativo",
@@ -185,6 +187,7 @@ async function main() {
     },
     create: {
       companyId,
+      number: 1,
       code: "FACT-2026",
       prefix: "F2026-",
       currentNumber: 0,

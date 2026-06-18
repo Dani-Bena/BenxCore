@@ -270,10 +270,17 @@ export async function createDraftInvoice(
   const calculated = calculateInvoiceLines(data.lines);
 
   return prisma.$transaction(async (tx) => {
+    const lastInvoice = await tx.invoice.findFirst({
+      where: { companyId },
+      orderBy: { number: "desc" },
+      select: { number: true },
+    });
+
     const invoice = await tx.invoice.create({
       data: {
         type: data.type,
         status: "DRAFT",
+        number: (lastInvoice?.number ?? 0) + 1,
 
         issueDate: null,
         dueDate: data.dueDate ?? null,

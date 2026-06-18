@@ -542,7 +542,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Nº</th>
               <th>Número</th>
               <th>Cliente</th>
               <th>Estado</th>
@@ -555,7 +555,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
           <tbody>
             {filteredInvoices.map((invoice) => (
               <tr key={invoice.id}>
-                <td>{invoice.id}</td>
+                <td>{invoice.number}</td>
                 <td>{invoice.invoiceNumber ?? "-"}</td>
                 <td>{clientName(invoice.client)}</td>
                 <td>
@@ -610,7 +610,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
               </span>
               <h2>
                 {selectedInvoice.invoiceNumber ??
-                  `Factura borrador #${selectedInvoice.id}`}
+                  `Factura borrador #${selectedInvoice.number}`}
               </h2>
               <p>
                 Cliente:{" "}

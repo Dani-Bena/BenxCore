@@ -130,7 +130,7 @@ export function SeriesPage({ token, notify }: Props) {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Nº</th>
               <th>Código</th>
               <th>Prefijo</th>
               <th>Número actual</th>
@@ -142,7 +142,7 @@ export function SeriesPage({ token, notify }: Props) {
           <tbody>
             {series.map((item) => (
               <tr key={item.id}>
-                <td>{item.id}</td>
+                <td>{item.number}</td>
                 <td>{item.code}</td>
                 <td>{item.prefix}</td>
                 <td>{item.currentNumber}</td>

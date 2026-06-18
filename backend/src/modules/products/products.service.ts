@@ -100,10 +100,17 @@ export async function createProduct(
   }
 
   return prisma.$transaction(async (tx) => {
+    const lastProduct = await tx.product.findFirst({
+      where: { companyId },
+      orderBy: { number: "desc" },
+      select: { number: true },
+    });
+
     const createdProduct = await tx.product.create({
       data: {
         ...data,
         companyId,
+        number: (lastProduct?.number ?? 0) + 1,
       },
     });
 

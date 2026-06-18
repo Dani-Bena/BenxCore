@@ -9,6 +9,7 @@ export type User = {
 
 export type Client = {
   id: number;
+  number: number;
   legalName?: string;
   name?: string;
   tradeName?: string | null;
@@ -24,6 +25,7 @@ export type Client = {
 
 export type Product = {
   id: number;
+  number: number;
   code: string | null;
   name: string;
   description: string | null;
@@ -37,6 +39,7 @@ export type Product = {
 
 export type InvoiceSeries = {
   id: number;
+  number: number;
   code: string;
   prefix: string;
   currentNumber: number;
@@ -101,6 +104,7 @@ export type JournalEntry = {
 
 export type Invoice = {
   id: number;
+  number: number;
   invoiceNumber: string | null;
   status: InvoiceStatus;
   total: string;

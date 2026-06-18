@@ -211,7 +211,7 @@ export function DashboardPage({ token, notify, onNavigateToInvoices }: Props) {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Nº</th>
               <th>Número</th>
               <th>Cliente</th>
               <th>Estado</th>
@@ -223,7 +223,7 @@ export function DashboardPage({ token, notify, onNavigateToInvoices }: Props) {
           <tbody>
             {latestInvoices.map((invoice) => (
               <tr key={invoice.id}>
-                <td>{invoice.id}</td>
+                <td>{invoice.number}</td>
                 <td>{invoice.invoiceNumber ?? "-"}</td>
                 <td>{clientName(invoice)}</td>
                 <td>
