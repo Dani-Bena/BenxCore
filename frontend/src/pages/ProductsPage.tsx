@@ -102,6 +102,7 @@ export function ProductsPage({ token, notify }: Props) {
               value={form.code}
               onChange={(e) => update("code", e.target.value)}
             />
+            <small className="field-hint">Opcional. Máximo 50 caracteres, único por empresa</small>
           </label>
 
           <label>
@@ -110,6 +111,7 @@ export function ProductsPage({ token, notify }: Props) {
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
             />
+            <small className="field-hint">Obligatorio. Entre 2 y 150 caracteres</small>
           </label>
 
           <label>
@@ -129,6 +131,7 @@ export function ProductsPage({ token, notify }: Props) {
               value={form.unit}
               onChange={(e) => update("unit", e.target.value)}
             />
+            <small className="field-hint">Obligatorio. Máximo 30 caracteres</small>
           </label>
 
           <label>
@@ -137,6 +140,7 @@ export function ProductsPage({ token, notify }: Props) {
               value={form.price}
               onChange={(e) => update("price", e.target.value)}
             />
+            <small className="field-hint">Obligatorio. Número positivo o cero</small>
           </label>
 
           <label>
@@ -145,6 +149,7 @@ export function ProductsPage({ token, notify }: Props) {
               value={form.taxRate}
               onChange={(e) => update("taxRate", e.target.value)}
             />
+            <small className="field-hint">Entre 0 y 100</small>
           </label>
 
           <label className="wide">
@@ -153,6 +158,7 @@ export function ProductsPage({ token, notify }: Props) {
               value={form.description}
               onChange={(e) => update("description", e.target.value)}
             />
+            <small className="field-hint">Opcional. Máximo 1000 caracteres</small>
           </label>
         </div>
 

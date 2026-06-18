@@ -109,6 +109,7 @@ export function ClientsPage({ token, notify }: Props) {
               value={form.legalName}
               onChange={(e) => update("legalName", e.target.value)}
             />
+            <small className="field-hint">Obligatorio. Entre 2 y 150 caracteres</small>
           </label>
 
           <label>
@@ -117,6 +118,7 @@ export function ClientsPage({ token, notify }: Props) {
               value={form.tradeName}
               onChange={(e) => update("tradeName", e.target.value)}
             />
+            <small className="field-hint">Opcional. Máximo 150 caracteres</small>
           </label>
 
           <label>
@@ -125,6 +127,7 @@ export function ClientsPage({ token, notify }: Props) {
               value={form.taxId}
               onChange={(e) => update("taxId", e.target.value)}
             />
+            <small className="field-hint">Opcional. Entre 5 y 20 caracteres (letras, números y guiones)</small>
           </label>
 
           <label>
@@ -133,6 +136,7 @@ export function ClientsPage({ token, notify }: Props) {
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
             />
+            <small className="field-hint">Opcional. Debe ser un email válido</small>
           </label>
 
           <label>
@@ -141,6 +145,7 @@ export function ClientsPage({ token, notify }: Props) {
               value={form.phone}
               onChange={(e) => update("phone", e.target.value)}
             />
+            <small className="field-hint">Opcional. Entre 7 y 30 caracteres</small>
           </label>
 
           <label>
@@ -149,6 +154,7 @@ export function ClientsPage({ token, notify }: Props) {
               value={form.address}
               onChange={(e) => update("address", e.target.value)}
             />
+            <small className="field-hint">Opcional. Máximo 255 caracteres</small>
           </label>
         </div>
 

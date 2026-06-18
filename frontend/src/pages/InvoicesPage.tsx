@@ -413,6 +413,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
                 value={form.dueDate}
                 onChange={(e) => update("dueDate", e.target.value)}
               />
+              <small className="field-hint">Opcional. Fecha límite de pago</small>
             </label>
             <label>
               Producto/servicio
@@ -428,6 +429,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
                   </option>
                 ))}
               </select>
+              <small className="field-hint">Opcional. Al seleccionar se rellenan precio, IVA y descripción</small>
             </label>
             <label className="wide">
               Descripción
@@ -435,6 +437,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
                 value={form.description}
                 onChange={(e) => update("description", e.target.value)}
               />
+              <small className="field-hint">Obligatorio. Entre 2 y 255 caracteres</small>
             </label>
             <label>
               Unidad
@@ -442,6 +445,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
                 value={form.unit}
                 onChange={(e) => update("unit", e.target.value)}
               />
+              <small className="field-hint">Obligatorio. Máximo 30 caracteres (ej. unit, hora, proyecto)</small>
             </label>
             <label>
               Cantidad
@@ -449,6 +453,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
                 value={form.quantity}
                 onChange={(e) => update("quantity", e.target.value)}
               />
+              <small className="field-hint">Obligatorio. Mayor que 0</small>
             </label>
             <label>
               Precio
@@ -456,6 +461,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
                 value={form.unitPrice}
                 onChange={(e) => update("unitPrice", e.target.value)}
               />
+              <small className="field-hint">Obligatorio. Número positivo o cero</small>
             </label>
             <label>
               Descuento %
@@ -463,6 +469,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
                 value={form.discountRate}
                 onChange={(e) => update("discountRate", e.target.value)}
               />
+              <small className="field-hint">Entre 0 y 100</small>
             </label>
             <label>
               IVA %
@@ -470,6 +477,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
                 value={form.taxRate}
                 onChange={(e) => update("taxRate", e.target.value)}
               />
+              <small className="field-hint">Entre 0 y 100. Por defecto 21%</small>
             </label>
             <label className="wide">
               Notas
@@ -477,6 +485,7 @@ export function InvoicesPage({ token, notify, statusFilter }: Props) {
                 value={form.notes}
                 onChange={(e) => update("notes", e.target.value)}
               />
+              <small className="field-hint">Opcional. Máximo 1000 caracteres</small>
             </label>
           </div>
           <aside className="invoice-estimate">

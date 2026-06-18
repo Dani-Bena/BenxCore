@@ -56,6 +56,9 @@ export async function registerUser(data: RegisterInput) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const currentYear = new Date().getFullYear();
+  const seriesCode = `FACT-${currentYear}`;
+  const seriesPrefix = `F${currentYear}-`;
 
   const company = await prisma.company.create({
     data: {
@@ -66,6 +69,15 @@ export async function registerUser(data: RegisterInput) {
           email,
           passwordHash,
           role: "ADMIN",
+          active: true,
+        },
+      },
+      invoiceSeries: {
+        create: {
+          code: seriesCode,
+          prefix: seriesPrefix,
+          currentNumber: 0,
+          year: currentYear,
           active: true,
         },
       },

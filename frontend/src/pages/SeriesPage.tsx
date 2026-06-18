@@ -88,6 +88,7 @@ export function SeriesPage({ token, notify }: Props) {
               value={form.code}
               onChange={(e) => update("code", e.target.value)}
             />
+            <small className="field-hint">Obligatorio. Mínimo 2 caracteres. Solo letras, números, guiones y guiones bajos</small>
           </label>
 
           <label>
@@ -96,6 +97,7 @@ export function SeriesPage({ token, notify }: Props) {
               value={form.prefix}
               onChange={(e) => update("prefix", e.target.value)}
             />
+            <small className="field-hint">Obligatorio. Se usará delante del número (ej. F2026-)</small>
           </label>
 
           <label>
@@ -104,6 +106,7 @@ export function SeriesPage({ token, notify }: Props) {
               value={form.currentNumber}
               onChange={(e) => update("currentNumber", e.target.value)}
             />
+            <small className="field-hint">Número entero, mínimo 0. La siguiente factura usará este número + 1</small>
           </label>
 
           <label>
@@ -112,6 +115,7 @@ export function SeriesPage({ token, notify }: Props) {
               value={form.year}
               onChange={(e) => update("year", e.target.value)}
             />
+            <small className="field-hint">Opcional. Entre 2000 y 2100</small>
           </label>
         </div>
 

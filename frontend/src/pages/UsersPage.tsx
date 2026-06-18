@@ -183,6 +183,7 @@ export function UsersPage({ token, notify }: Props) {
               onChange={(e) => update("name", e.target.value)}
               placeholder="Nombre del usuario"
             />
+            <small className="field-hint">Obligatorio</small>
           </label>
 
           <label>
@@ -192,6 +193,7 @@ export function UsersPage({ token, notify }: Props) {
               onChange={(e) => update("email", e.target.value)}
               placeholder="usuario@empresa.com"
             />
+            <small className="field-hint">Obligatorio. Email válido y único en toda la aplicación</small>
           </label>
 
           <label>
@@ -204,6 +206,7 @@ export function UsersPage({ token, notify }: Props) {
               <option value="ACCOUNTANT">Contable</option>
               <option value="USER">Usuario</option>
             </select>
+            <small className="field-hint">Admin gestiona usuarios. Contable y Usuario acceden al resto</small>
           </label>
 
           <label>
@@ -218,6 +221,11 @@ export function UsersPage({ token, notify }: Props) {
                   : "Contraseña inicial"
               }
             />
+            <small className="field-hint">
+              {editingUserId
+                ? "Opcional. Déjalo vacío para no cambiarla. Mínimo 8 caracteres si se rellena"
+                : "Obligatorio. Mínimo 8 caracteres"}
+            </small>
           </label>
         </div>
 
