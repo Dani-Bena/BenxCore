@@ -10,6 +10,7 @@ type UserRole = "ADMIN" | "ACCOUNTANT" | "USER";
 
 type UserRow = {
   id: number;
+  number: number;
   name: string;
   email: string;
   role: UserRole;
@@ -251,7 +252,7 @@ export function UsersPage({ token, notify }: Props) {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Nº</th>
               <th>Nombre</th>
               <th>Email</th>
               <th>Rol</th>
@@ -263,7 +264,7 @@ export function UsersPage({ token, notify }: Props) {
           <tbody>
             {users.map((user) => (
               <tr key={user.id}>
-                <td>{user.id}</td>
+                <td>{user.number}</td>
                 <td>{user.name}</td>
                 <td>{user.email}</td>
                 <td>

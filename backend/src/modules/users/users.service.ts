@@ -160,6 +160,12 @@ export async function createUser(
 
   const passwordHash = await bcrypt.hash(data.password, 10);
 
+  const lastUser = await prisma.user.findFirst({
+    where: { companyId: context.companyId },
+    orderBy: { number: "desc" },
+    select: { number: true },
+  });
+
   const createdUser = await prisma.user.create({
     data: {
       name: data.name,
@@ -168,6 +174,7 @@ export async function createUser(
       role: data.role,
       active: true,
       companyId: context.companyId,
+      number: (lastUser?.number ?? 0) + 1,
     },
   });
 

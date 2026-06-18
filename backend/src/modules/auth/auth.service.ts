@@ -65,6 +65,7 @@ export async function registerUser(data: RegisterInput) {
       name: companyName,
       users: {
         create: {
+          number: 1,
           name,
           email,
           passwordHash,

@@ -107,6 +107,7 @@ model Company {
 
 model User {
   id           Int      @id @default(autoincrement())
+  number       Int      @default(0)
   name         String
   email        String   @unique
   passwordHash String
@@ -121,6 +122,7 @@ model User {
 
   auditLogs AuditLog[]
 
+  @@unique([companyId, number])
   @@index([companyId])
   @@index([companyId, active])
   @@index([companyId, role])
