@@ -553,8 +553,15 @@ function assertCompanyFiscalData(company: {
   nif: string | null;
   address: string | null;
 }) {
-  if (!company.name || !company.nif || !company.address) {
-    throw new InvoiceServiceError("Company fiscal data is incomplete", 400);
+  const missing: string[] = [];
+  if (!company.name) missing.push("nombre");
+  if (!company.nif) missing.push("NIF");
+  if (!company.address) missing.push("dirección");
+  if (missing.length > 0) {
+    throw new InvoiceServiceError(
+      `Faltan datos fiscales de la empresa: ${missing.join(", ")}. Ve a la configuración de empresa para completarlos.`,
+      400
+    );
   }
 }
 
@@ -563,8 +570,15 @@ function assertClientFiscalData(client: {
   taxId: string | null;
   address: string | null;
 }) {
-  if (!client.legalName || !client.taxId || !client.address) {
-    throw new InvoiceServiceError("Client fiscal data is incomplete", 400);
+  const missing: string[] = [];
+  if (!client.legalName) missing.push("razón social");
+  if (!client.taxId) missing.push("CIF/NIF");
+  if (!client.address) missing.push("dirección");
+  if (missing.length > 0) {
+    throw new InvoiceServiceError(
+      `Faltan datos fiscales del cliente: ${missing.join(", ")}. Edita el cliente para completarlos.`,
+      400
+    );
   }
 }
 
@@ -594,19 +608,19 @@ export async function issueInvoice(
   }
 
   if (existingInvoice.status !== "DRAFT") {
-    throw new InvoiceServiceError("Only draft invoices can be issued", 409);
+    throw new InvoiceServiceError("Solo se pueden emitir facturas en borrador", 409);
   }
 
   if (existingInvoice.type !== "STANDARD") {
     throw new InvoiceServiceError(
-      "Only standard invoices can be issued as official invoices",
+      "Solo se pueden emitir facturas de tipo estándar",
       409
     );
   }
 
   if (!existingInvoice.invoiceSeriesId || !existingInvoice.invoiceSeries) {
     throw new InvoiceServiceError(
-      "Invoice series is required to issue an invoice",
+      "Se necesita una serie de facturación para emitir la factura",
       400
     );
   }
@@ -615,21 +629,21 @@ export async function issueInvoice(
 
   if (!existingInvoice.client.active) {
     throw new InvoiceServiceError(
-      "Cannot issue an invoice for an inactive client",
+      "No se puede emitir una factura para un cliente inactivo",
       409
     );
   }
 
   if (!existingInvoice.invoiceSeries.active) {
     throw new InvoiceServiceError(
-      "Cannot issue an invoice with an inactive series",
+      "No se puede emitir una factura con una serie inactiva",
       409
     );
   }
 
   if (existingInvoice.lines.length === 0) {
     throw new InvoiceServiceError(
-      "Cannot issue an invoice without lines",
+      "No se puede emitir una factura sin líneas",
       400
     );
   }
