@@ -45,7 +45,7 @@ function sanitizeUser(user: SanitizedUserInput) {
 }
 
 export async function registerUser(data: RegisterInput) {
-  const { companyName, name, email, password } = data;
+  const { companyName, companyNif, companyAddress, companyEmail, companyPhone, name, email, password } = data;
 
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -63,6 +63,10 @@ export async function registerUser(data: RegisterInput) {
   const company = await prisma.company.create({
     data: {
       name: companyName,
+      nif: companyNif,
+      address: companyAddress,
+      email: companyEmail || null,
+      phone: companyPhone || null,
       users: {
         create: {
           number: 1,

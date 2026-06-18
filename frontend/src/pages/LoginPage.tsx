@@ -9,12 +9,18 @@ type Props = {
 
 function validateRegister(fields: {
   companyName: string;
+  companyNif: string;
+  companyAddress: string;
   name: string;
   email: string;
   password: string;
 }): string | null {
   if (fields.companyName.trim().length < 2)
     return "El nombre de la empresa debe tener al menos 2 caracteres.";
+  if (fields.companyNif.trim().length < 5)
+    return "El NIF/CIF de la empresa debe tener al menos 5 caracteres.";
+  if (fields.companyAddress.trim().length < 2)
+    return "La dirección fiscal de la empresa es obligatoria.";
   if (fields.name.trim().length < 2)
     return "Tu nombre debe tener al menos 2 caracteres.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email))
@@ -30,6 +36,8 @@ export function LoginPage({ onLogin }: Props) {
   const [password, setPassword] = useState("12345678");
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [companyNif, setCompanyNif] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -70,7 +78,7 @@ export function LoginPage({ onLogin }: Props) {
   }
 
   async function register() {
-    const validationError = validateRegister({ companyName, name, email, password });
+    const validationError = validateRegister({ companyName, companyNif, companyAddress, name, email, password });
     if (validationError) {
       setError(validationError);
       return;
@@ -83,7 +91,7 @@ export function LoginPage({ onLogin }: Props) {
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyName, name, email, password }),
+        body: JSON.stringify({ companyName, companyNif, companyAddress, name, email, password }),
       });
 
       if (!response.ok) {
@@ -155,6 +163,26 @@ export function LoginPage({ onLogin }: Props) {
                     placeholder="Mi Empresa S.L."
                   />
                   <small className="field-hint">Mínimo 2 caracteres</small>
+                </label>
+
+                <label>
+                  NIF/CIF de la empresa
+                  <input
+                    value={companyNif}
+                    onChange={(event) => setCompanyNif(event.target.value)}
+                    placeholder="B12345678"
+                  />
+                  <small className="field-hint">Obligatorio. Necesario para emitir facturas</small>
+                </label>
+
+                <label>
+                  Dirección fiscal
+                  <input
+                    value={companyAddress}
+                    onChange={(event) => setCompanyAddress(event.target.value)}
+                    placeholder="Calle Ejemplo 1, Madrid"
+                  />
+                  <small className="field-hint">Obligatorio. Aparecerá en las facturas</small>
                 </label>
 
                 <label>

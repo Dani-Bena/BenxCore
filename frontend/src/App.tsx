@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./App.css";
 import logo from "./assets/logo.png";
 import { ClientsPage } from "./pages/ClientsPage";
+import { CompanyPage } from "./pages/CompanyPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -16,7 +17,8 @@ type Page =
   | "products"
   | "series"
   | "invoices"
-  | "users";
+  | "users"
+  | "company";
 
 function loadStoredUser(): User | null {
   const raw = localStorage.getItem("user");
@@ -117,12 +119,21 @@ export default function App() {
           </button>
 
           {user.role === "ADMIN" && (
-            <button
-              className={page === "users" ? "active" : ""}
-              onClick={() => setPage("users")}
-            >
-              Usuarios
-            </button>
+            <>
+              <button
+                className={page === "users" ? "active" : ""}
+                onClick={() => setPage("users")}
+              >
+                Usuarios
+              </button>
+
+              <button
+                className={page === "company" ? "active" : ""}
+                onClick={() => setPage("company")}
+              >
+                Empresa
+              </button>
+            </>
           )}
         </nav>
 
@@ -166,7 +177,11 @@ export default function App() {
           <UsersPage token={token} notify={setMessage} />
         )}
 
-        {page === "users" && user.role !== "ADMIN" && (
+        {page === "company" && user.role === "ADMIN" && (
+          <CompanyPage token={token} notify={setMessage} />
+        )}
+
+        {(page === "users" || page === "company") && user.role !== "ADMIN" && (
           <DashboardPage
             token={token}
             notify={setMessage}
