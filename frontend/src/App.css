@@ -205,6 +205,12 @@ select:focus {
   background: var(--color-primary-hover);
 }
 
+.field-hint {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .login-error {
   background: var(--color-danger-bg);
   color: var(--color-danger);
@@ -214,8 +220,31 @@ select:focus {
   font-size: 14px;
 }
 
-.login-demo {
+.login-toggle {
   margin-top: 22px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.login-toggle button {
+  background: none;
+  color: var(--color-primary);
+  font-weight: 700;
+  padding: 0;
+  font-size: 14px;
+}
+
+.login-toggle button:hover {
+  background: none;
+  text-decoration: underline;
+  transform: none;
+}
+
+.login-demo {
+  margin-top: 14px;
   border-top: 1px solid var(--color-border);
   padding-top: 16px;
   display: grid;
