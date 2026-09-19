@@ -9,6 +9,13 @@ The project goes beyond a basic CRUD application by connecting different areas o
 The main goal of BenxCore is to explore the architecture and business logic behind a real-world ERP while building a modular and maintainable full-stack application.
 
 ---
+## 🖥️ Preview
+
+### Dashboard
+
+![BenxCore Dashboard](docs/dashboard.jpg)
+
+BenxCore provides a centralized dashboard with an overview of invoicing, payments, outstanding balances, customers and products.
 
 ## 🛠 Tech Stack
 
