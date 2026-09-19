@@ -1,53 +1,141 @@
 # BenxCore
 
-BenxCore es un ERP ligero para la gestión empresarial básica: empresas, usuarios, clientes, productos/servicios, facturación, pagos, contabilidad automática y generación documental en PDF.
+> A full-stack ERP application for managing core business operations, including customers, products, invoicing, payments, accounting and document generation.
 
-El proyecto está desarrollado como Trabajo de Fin de Grado y se centra en construir una arquitectura backend modular, mantenible y extensible, con un frontend que permite recorrer todo el flujo (login → clientes → productos → facturas → emisión → pagos → PDFs → contabilidad) sin necesidad de usar Postman ni la terminal.
+BenxCore is a full-stack business management application built as part of my **Web Application Development (DAW)** studies.
 
-## Stack tecnológico
+The project goes beyond a basic CRUD application by connecting different areas of a business into a single workflow: from managing customers and products to issuing invoices, recording payments, generating PDFs and automatically creating the corresponding accounting entries.
 
-**Backend**
+The main goal of BenxCore is to explore the architecture and business logic behind a real-world ERP while building a modular and maintainable full-stack application.
+
+---
+
+## 🛠 Tech Stack
+
+### Backend
+
+![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 
 - Node.js + Express
 - TypeScript
-- Prisma ORM + PostgreSQL
-- Zod (validación)
-- JWT + bcrypt (autenticación)
-- PDFKit (generación de PDFs)
-- Vitest + Supertest (tests)
-- Docker / Docker Compose (base de datos)
+- Prisma ORM
+- PostgreSQL
+- Zod
+- JWT + bcrypt
+- PDFKit
+- Vitest + Supertest
+- Docker / Docker Compose
 
-**Frontend**
+### Frontend
 
-- React 19 + TypeScript
+![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+
+- React 19
+- TypeScript
 - Vite
 
-## Funcionalidades principales
+---
 
-- Autenticación con JWT.
-- Registro de empresa y usuario administrador.
-- Gestión de datos fiscales de empresa.
-- Gestión de usuarios y roles por empresa (`ADMIN`, `ACCOUNTANT`, `USER`).
-- CRUD de clientes (con soft delete y control de duplicados de NIF).
-- CRUD de productos y servicios.
-- Series de facturación con numeración correlativa.
-- Creación de facturas en borrador, con cálculo automático de líneas, descuentos, IVA y totales.
-- Emisión de facturas con numeración correlativa y snapshot fiscal de emisor y cliente.
-- Registro de pagos parciales y completos, con cambio automático de estado de la factura.
-- Generación automática de asientos contables (partida doble) al emitir y al cobrar.
-- Consulta de cuentas contables y asientos.
-- PDF de factura y PDF de comprobante de pago (con logo de empresa si está configurado).
-- Auditoría de operaciones relevantes (`AuditLog`).
-- Soft delete en las entidades principales.
-- Frontend con dashboard, gestión de clientes/productos/series/facturas/usuarios.
-- Tests automáticos de los flujos críticos.
+## ✨ Key Features
 
-## Arquitectura
+### 🔐 Authentication & Users
 
-El backend está organizado por módulos, cada uno con su capa de rutas, validación y lógica de negocio:
+- JWT-based authentication
+- Company and administrator registration
+- User management
+- Role system:
+  - `ADMIN`
+  - `ACCOUNTANT`
+  - `USER`
+- Secure password hashing with bcrypt
 
-```txt
+### 👥 Customer Management
+
+- Create, read, update and delete customers
+- Soft delete
+- Tax ID / NIF duplicate validation
+- Customer fiscal information management
+
+### 📦 Products & Services
+
+- Product and service management
+- Pricing and tax information
+- Soft delete support
+
+### 🧾 Invoicing
+
+- Invoice drafts
+- Sequential invoice numbering
+- Configurable invoice series
+- Automatic line calculations
+- Discounts and VAT calculations
+- Automatic invoice totals
+- Fiscal snapshots of issuer and customer when an invoice is issued
+- Invoice lifecycle management
+
+### 💳 Payments
+
+- Partial payments
+- Full payments
+- Payment history
+- Automatic invoice status updates
+- Payment receipt generation
+
+### 📚 Automatic Accounting
+
+BenxCore automatically generates **double-entry accounting entries** when relevant business events occur.
+
+For example:
+
+```text
+Invoice issued
+      ↓
+Accounting entry generated
+
+Payment registered
+      ↓
+Payment accounting entry generated
+```
+
+This connects invoicing and payments directly with the accounting system instead of treating them as isolated modules.
+
+### 📄 PDF Generation
+
+- Invoice PDFs
+- Payment receipt PDFs
+- Company fiscal information
+- Customer information
+- Company logo support
+
+### 🔎 Audit System
+
+Relevant operations are recorded through an `AuditLog`, providing traceability across the application.
+
+### 🧪 Automated Testing
+
+Critical backend flows are tested using:
+
+- Vitest
+- Supertest
+
+Tests cover important business logic and API behaviour.
+
+---
+
+## 🏗 Architecture
+
+The backend follows a modular structure where each domain contains its own routes, validation schemas and business logic.
+
+```text
 backend/src/modules/
+
 ├── auth
 ├── company
 ├── users
@@ -58,43 +146,133 @@ backend/src/modules/
 └── accounting
 ```
 
-Patrón habitual dentro de un módulo:
+A typical module follows this structure:
 
-```txt
+```text
 src/modules/clients/
-├── clients.routes.ts    → capa HTTP (Express)
-├── clients.schemas.ts   → validación con Zod
-└── clients.service.ts   → lógica de negocio + acceso a datos (Prisma)
+
+├── clients.routes.ts
+├── clients.schemas.ts
+└── clients.service.ts
 ```
 
-El frontend es una SPA separada en `frontend/`, organizada por páginas (una por sección del menú) más algunos componentes y helpers compartidos. Ver `docs/frontend.md` para más detalle.
+Where:
 
-## Puesta en marcha
+```text
+routes   → HTTP / Express layer
+schemas  → validation with Zod
+service  → business logic and Prisma data access
+```
 
-### 1. Base de datos
+This structure keeps the backend separated by business domain and makes it easier to extend the application with new modules.
 
-El repositorio incluye un `docker-compose.yml` con un contenedor de PostgreSQL:
+The frontend is a React SPA located in `frontend/`, organised around the main sections of the ERP with shared components and API utilities.
+
+---
+
+## 🔄 Application Flow
+
+One of the main goals of BenxCore is to connect the different modules into a complete business workflow.
+
+```text
+Authentication
+      ↓
+Company configuration
+      ↓
+Customers & Products
+      ↓
+Invoice Draft
+      ↓
+Invoice Issued
+      ↓
+Accounting Entry
+      ↓
+Invoice PDF
+      ↓
+Partial / Full Payment
+      ↓
+Payment Accounting Entry
+      ↓
+Payment Receipt
+```
+
+This allows the entire process to be managed through the frontend without relying on Postman or manual database operations.
+
+---
+
+## 🚀 Getting Started
+
+### Requirements
+
+Make sure you have installed:
+
+- Node.js
+- npm
+- Docker
+- Docker Compose
+
+---
+
+### 1. Start PostgreSQL
+
+The repository includes a `docker-compose.yml` file for the database.
 
 ```bash
 docker compose up -d
 ```
 
-Esto levanta PostgreSQL en `localhost:5432` con la base de datos, usuario y contraseña definidos en `docker-compose.yml`. Si usas otra instancia de PostgreSQL, ajusta `DATABASE_URL` en consecuencia.
+By default, PostgreSQL runs on:
 
-### 2. Backend
+```text
+localhost:5432
+```
+
+You can also use your own PostgreSQL instance by changing `DATABASE_URL`.
+
+---
+
+### 2. Start the Backend
 
 ```bash
 cd backend
 npm install
-cp .env.example .env   # y ajusta los valores según tu entorno
+```
+
+Create your local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Then apply the database migrations:
+
+```bash
 npx prisma migrate deploy
-npm run seed            # crea empresa, usuario admin y datos de demo
+```
+
+Optionally populate the database with demo data:
+
+```bash
+npm run seed
+```
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-El servidor arranca por defecto en `http://localhost:3000`.
+The API runs by default at:
 
-### 3. Frontend
+```text
+http://localhost:3000
+```
+
+---
+
+### 3. Start the Frontend
+
+Open another terminal:
 
 ```bash
 cd frontend
@@ -102,78 +280,189 @@ npm install
 npm run dev
 ```
 
-La aplicación se sirve por defecto en `http://localhost:5173` y apunta al backend en `http://localhost:3000` (configurado en `frontend/src/api.ts`).
+The frontend runs by default at:
 
-### Usuario de demo
-
-El seed crea una empresa de demo con un usuario administrador:
-
-```txt
-email:    daniel@test.com
-password: 12345678
+```text
+http://localhost:5173
 ```
 
-## Variables de entorno
+---
 
-Definidas en `backend/.env` (ver `backend/.env.example`):
+## 🔑 Environment Variables
 
-```txt
-# Server
+Backend environment variables are defined in:
+
+```text
+backend/.env
+```
+
+Use `backend/.env.example` as a template.
+
+Example:
+
+```env
 PORT=3000
 NODE_ENV=development
 
-# Database
-DATABASE_URL="postgresql://usuario:password@localhost:5432/benxcore_db?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/benxcore_db?schema=public"
 
-# JWT
-JWT_SECRET="cambia-este-secreto-en-produccion"
+JWT_SECRET="replace-with-your-secret"
 JWT_EXPIRES_IN="7d"
 ```
 
-`backend/.env` no se versiona; `backend/.env.example` sirve como plantilla.
+> `.env` is not committed to the repository.
 
-## Comandos útiles
+---
 
-**Backend** (`cd backend`)
+## 🧪 Useful Commands
 
-```bash
-npm run dev         # arrancar en desarrollo (tsx watch)
-npm run build       # compilar TypeScript
-npm start           # arrancar el build compilado
-npm run typecheck   # comprobar tipos sin compilar
-npm run seed        # poblar la base de datos con datos de demo
-npm test            # ejecutar tests (vitest)
-npx prisma migrate dev      # crear/aplicar migraciones en desarrollo
-npx prisma migrate deploy   # aplicar migraciones existentes
-```
-
-**Frontend** (`cd frontend`)
+### Backend
 
 ```bash
-npm run dev       # servidor de desarrollo (Vite)
-npm run build     # build de producción
-npm run preview   # previsualizar el build
-npm run lint      # linter
+npm run dev
 ```
 
-## Documentación
+Start the backend in development mode.
 
-Toda la documentación funcional vive en `docs/`:
+```bash
+npm run build
+```
 
-- [`requisitos.md`](docs/requisitos.md) — requisitos iniciales del proyecto.
-- [`base-datos.md`](docs/base-datos.md) — modelo de datos y entidades.
-- [`backend-overview.md`](docs/backend-overview.md) — visión general del backend, módulos y decisiones de diseño.
-- [`api-endpoints.md`](docs/api-endpoints.md) — referencia de endpoints de la API.
-- [`facturacion.md`](docs/facturacion.md) — ciclo de vida de facturas y pagos.
-- [`contabilidad.md`](docs/contabilidad.md) — contabilidad automática y asientos.
-- [`pdf.md`](docs/pdf.md) — generación de PDFs de factura y comprobantes.
-- [`usuarios.md`](docs/usuarios.md) — gestión de usuarios y roles.
-- [`frontend.md`](docs/frontend.md) — frontend (estructura, páginas, flujo).
-- [`tareas.md`](docs/tareas.md) — lista de tareas y progreso.
-- [`tfg-status-and-roadmap.md`](docs/tfg-status-and-roadmap.md) — estado del proyecto y roadmap técnico.
+Compile TypeScript.
 
-## Estado del proyecto
+```bash
+npm start
+```
 
-El backend implementa un flujo completo: registro/login → configuración de empresa y usuarios → clientes y productos → series de facturación → facturas en borrador → emisión → asientos contables → PDF de factura → pagos → comprobantes de pago. El frontend cubre ese mismo flujo de extremo a extremo.
+Run the compiled application.
 
-Quedan como trabajo futuro (detallado en `docs/tfg-status-and-roadmap.md`): validación formal de asientos cuadrados, permisos diferenciados por rol en todos los módulos, facturas rectificativas, asientos manuales, libro diario/mayor, control automático de facturas vencidas y documentación interactiva con Swagger/OpenAPI.
+```bash
+npm run typecheck
+```
+
+Run TypeScript type checking.
+
+```bash
+npm test
+```
+
+Run automated tests.
+
+```bash
+npm run seed
+```
+
+Populate the database with demo data.
+
+```bash
+npx prisma migrate dev
+```
+
+Create and apply migrations during development.
+
+```bash
+npx prisma migrate deploy
+```
+
+Apply existing migrations.
+
+### Frontend
+
+```bash
+npm run dev
+```
+
+Start the Vite development server.
+
+```bash
+npm run build
+```
+
+Create a production build.
+
+```bash
+npm run preview
+```
+
+Preview the production build.
+
+```bash
+npm run lint
+```
+
+Run the linter.
+
+---
+
+## 📖 Documentation
+
+Additional technical documentation is available in [`docs/`](docs/).
+
+| Document | Description |
+|---|---|
+| [`requisitos.md`](docs/requisitos.md) | Initial project requirements |
+| [`base-datos.md`](docs/base-datos.md) | Database model and entities |
+| [`backend-overview.md`](docs/backend-overview.md) | Backend architecture and design decisions |
+| [`api-endpoints.md`](docs/api-endpoints.md) | API endpoint reference |
+| [`facturacion.md`](docs/facturacion.md) | Invoice and payment lifecycle |
+| [`contabilidad.md`](docs/contabilidad.md) | Automatic accounting system |
+| [`pdf.md`](docs/pdf.md) | Invoice and payment PDF generation |
+| [`usuarios.md`](docs/usuarios.md) | Users and roles |
+| [`frontend.md`](docs/frontend.md) | Frontend architecture and application flow |
+| [`tareas.md`](docs/tareas.md) | Development progress |
+| [`tfg-status-and-roadmap.md`](docs/tfg-status-and-roadmap.md) | Project status and technical roadmap |
+
+> Some internal documentation is currently written in Spanish.
+
+---
+
+## 🗺 Roadmap
+
+BenxCore already supports the complete core workflow from authentication to invoicing, payments and accounting.
+
+Future improvements include:
+
+- [ ] Formal validation of balanced accounting entries
+- [ ] Complete role-based permissions across all modules
+- [ ] Credit notes / corrective invoices
+- [ ] Manual accounting entries
+- [ ] General journal
+- [ ] General ledger
+- [ ] Automatic overdue invoice management
+- [ ] Swagger / OpenAPI documentation
+- [ ] Further frontend improvements
+- [ ] Expanded automated test coverage
+
+---
+
+## 🎯 Project Goals
+
+BenxCore is primarily a learning and portfolio project.
+
+Its purpose is to apply concepts from my Web Application Development studies to a larger application involving:
+
+- Full-stack architecture
+- REST API design
+- Relational databases
+- Authentication and authorisation
+- Business logic
+- Accounting workflows
+- Automated testing
+- Docker-based development environments
+- Maintainable and modular code
+
+The project is actively evolving as I continue learning and implementing new features.
+
+---
+
+## 👨‍💻 Author
+
+**Daniel Benavides**
+
+Full-Stack Developer in training · Web Application Development (DAW)
+
+[LinkedIn](https://www.linkedin.com/in/danielbenavides-dev/) · [GitHub](https://github.com/Dani-Bena)
+
+---
+
+⭐ If you find the project interesting, feel free to explore the repository and its documentation.
