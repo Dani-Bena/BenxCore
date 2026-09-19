@@ -95,6 +95,12 @@ BenxCore provides a centralized dashboard with an overview of invoicing, payment
 - Automatic invoice status updates
 - Payment receipt generation
 
+### 🔄 Invoice, Payment & Accounting Flow
+
+![BenxCore Invoice and Accounting](docs/invoice-accounting.jpg)
+
+Payments are directly connected to the accounting system. When an invoice is issued or a payment is registered, BenxCore automatically generates the corresponding accounting entries while keeping track of the invoice balance and payment history.
+
 ### 📚 Automatic Accounting
 
 BenxCore automatically generates **double-entry accounting entries** when relevant business events occur.
