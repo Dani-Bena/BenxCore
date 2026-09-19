@@ -121,6 +121,10 @@ This connects invoicing and payments directly with the accounting system instead
 
 ### 📄 PDF Generation
 
+BenxCore generates professional invoice and payment receipt documents directly from the application.
+
+![BenxCore Invoice PDF](docs/invoice-pdf.jpg)
+
 - Invoice PDFs
 - Payment receipt PDFs
 - Company fiscal information
